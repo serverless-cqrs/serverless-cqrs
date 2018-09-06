@@ -1,0 +1,32 @@
+{
+  "name": "serverless-cqrs.elasticsearch-adapter",
+  "version": "1.0.0",
+  "description": "A repository adapter for serverless-cqrs",
+  "main": "index.js",
+  "scripts": {
+    "test": "tap __test__/*"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/serverless-cqrs/elasticsearch-adapter.git"
+  },
+  "keywords": [
+    "serverless",
+    "cqrs",
+    "es",
+    "eventsourcing"
+  ],
+  "author": "Yonah Forst",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/serverless-cqrs/elasticsearch-adapter/issues"
+  },
+  "homepage": "https://github.com/serverless-cqrs/elasticsearch-adapter#readme",
+  "devDependencies": {
+    "proxyquire": "^2.1.0",
+    "tap": "^12.0.1"
+  },
+  "dependencies": {
+    "axios": "^0.18.0"
+  }
+}
