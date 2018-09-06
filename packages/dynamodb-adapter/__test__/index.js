@@ -1,16 +1,12 @@
 const { test } = require('tap')
-const proxyquire = require('proxyquire')
 
 const AWS = require('aws-sdk-mock')
 const AWS_SDK = require('aws-sdk')
 
 AWS.setSDKInstance(AWS_SDK);
 
-const defaultStubs = {
-  '../../lib/env': {
-    write_model_tablename: 'fooTable'
-  }
-}
+const { makeClient } = require('../index')
+const client = makeClient('fooTable')
 
 test('loadEvents', async assert => {
   var sentParams
@@ -44,8 +40,7 @@ test('loadEvents', async assert => {
     },
   }
 
-  const { makeClient } = proxyquire('../index', defaultStubs)
-  const res = await makeClient('foo').loadEvents('p123')
+  const res = await client('foo').loadEvents('p123')
 
   assert.deepEquals(sentParams, expectedParams, 'queries dynamodb for events')
   assert.deepEquals(res, events, 'returns parsed events')
@@ -102,8 +97,7 @@ test('scanIterator', async assert => {
   })
 
 
-  const { makeClient } = proxyquire('../index', defaultStubs)
-  const { scanIterator } = makeClient('foo')
+  const { scanIterator } = client('foo')
   const results = []
   
   for (let promise of scanIterator()) {
@@ -130,6 +124,7 @@ test('scanIterator', async assert => {
   }
   const expected = events.map(( e, i ) => ({
     id: 'e123',
+    entity: 'foo',
     version: i + 1,
     events: [ e ],
   }))
@@ -169,8 +164,7 @@ test('append', async assert => {
     ReturnValues: 'NONE'
   }
 
-  const { makeClient } = proxyquire('../index', defaultStubs)
-  const res = await makeClient('foo').append('p123', 3, events)
+  const res = await client('foo').append('p123', 3, events)
 
   assert.match(sentParams, expectedParams, 'makes putItem request to dynamodb')
   
@@ -179,7 +173,7 @@ test('append', async assert => {
     callback(new Error('ConditionalCheckFailedException'))
   })
 
-  await makeClient('foo').append('p123', 3, events).catch(e => {
+  await client('foo').append('p123', 3, events).catch(e => {
     assert.equals(e.message('A commit already exists with the specified version'))
   })
 
