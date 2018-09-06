@@ -1,0 +1,25 @@
+{
+  "name": "serverless-cqrs.dynamodb-adapter",
+  "version": "1.0.0",
+  "description": "A repository adapter for serverless-cqrs",
+  "main": "index.js",
+  "scripts": {
+    "test": "npm test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/serverless-cqrs/dynamodb-adapter.git"
+  },
+  "keywords": [
+    "serverless",
+    "cqrs",
+    "es",
+    "eventsourcing"
+  ],
+  "author": "Yonah Forst",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/serverless-cqrs/dynamodb-adapter/issues"
+  },
+  "homepage": "https://github.com/serverless-cqrs/dynamodb-adapter#readme"
+}
