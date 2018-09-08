@@ -1,0 +1,26 @@
+{
+  "name": "serverless-cqrs.write-model",
+  "version": "1.0.0",
+  "description": "The serverelss-cqrs write model. A collection of builder functions for generating a write model.",
+  "main": "src/index.js",
+  "scripts": {
+    "test": "tap src/__test__/*.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/serverless-cqrs/write-model.git"
+  },
+  "keywords": [
+    "serverless",
+    "cqrs",
+    "eventsourcing",
+    "es",
+    "writemodel"
+  ],
+  "author": "Yonah Forst",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/serverless-cqrs/write-model/issues"
+  },
+  "homepage": "https://github.com/serverless-cqrs/write-model#readme"
+}
