@@ -1,6 +1,6 @@
 {
   "name": "serverless-cqrs.read-model",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "description": "The serverelss-cqrs read model. A collection of builder functions for generating a read model.",
   "main": "src/index.js",
   "scripts": {
