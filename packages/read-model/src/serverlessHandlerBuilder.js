@@ -1,8 +1,9 @@
 const vandium = require('vandium');
 
 
-module.exports = ({ queries, eventHandler, refresh }) => {
+module.exports.build = ({ queries, eventHandler, refresh }) => {
   const obj = {}
+  
   if (queries)
     obj.queries = vandium.generic()
       .handler(event => {
