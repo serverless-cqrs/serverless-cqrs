@@ -29,7 +29,7 @@
   
 */
 
-module.exports.build = (client, reducer) => {
+module.exports.build = ({ client, reducer }) => {
   const applyEvents = (events, { state, version=0 }) => ({
     version: version + events.length,
     state: reducer(events, state)

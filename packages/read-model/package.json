@@ -22,5 +22,9 @@
   "bugs": {
     "url": "https://github.com/serverless-cqrs/read-model/issues"
   },
-  "homepage": "https://github.com/serverless-cqrs/read-model#readme"
+  "homepage": "https://github.com/serverless-cqrs/read-model#readme",
+  "dependencies": {
+    "lodash.groupby": "^4.6.0",
+    "vandium": "^4.8.0"
+  }
 }

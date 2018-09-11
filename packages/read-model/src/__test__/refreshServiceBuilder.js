@@ -1,6 +1,6 @@
 const { test } = require('tap')
 
-const refreshHandler = require('../index')
+const refreshServiceBuilder = require('../refreshServiceBuilder')
 
 const events = [{
   id: 123,
@@ -20,39 +20,35 @@ const events = [{
   events: [ 'event1', 'event2' ],
 }]
 
-const eventRepositories = {
-  foo: {
-    scanIterator: function* iterate () {
-      yield Promise.resolve(events.slice(0, 3))
-      yield Promise.resolve(events.slice(3))
-    },
+const eventAdapter = {
+  scanIterator: function* iterate () {
+    yield Promise.resolve(events.slice(0, 3))
+    yield Promise.resolve(events.slice(3))
   },
 }
 
 
 test('handles consecutive events', async assert => {
   const saved = []
-  const projectionRepositories = {
-    foo: {
-      getByIds: () => Promise.resolve({
-        results: {
-          123: {
-            id: 123,
-            version: 3,
-          },
-          456: {
-            id: 456,
-            version: 7,
-          }
+  const repository = {
+    getByIds: () => Promise.resolve({
+      results: {
+        123: {
+          id: 123,
+          version: 3,
         },
-        save: params => Promise.resolve(saved.push(params))
-      }),
-    },
+        456: {
+          id: 456,
+          version: 7,
+        }
+      },
+      save: params => Promise.resolve(saved.push(params))
+    }),
   }
 
-  const { refresh } = refreshHandler({ 
-    eventRepositories, 
-    projectionRepositories,
+  const { refresh } = refreshServiceBuilder.build({ 
+    repository, 
+    eventAdapter,
   })
 
   const expected = [{
@@ -69,27 +65,25 @@ test('handles consecutive events', async assert => {
 
 test('doesnt handle inconsecutive events', async assert => {
   const saved = []
-  const projectionRepositories = {
-    foo: {
-      getByIds: () => Promise.resolve({
-        results: {
-          123: {
-            id: 123,
-            version: 5,
-          },
-          456: {
-            id: 456,
-            version: 7,
-          }
+  const repository = {
+    getByIds: () => Promise.resolve({
+      results: {
+        123: {
+          id: 123,
+          version: 5,
         },
-        save: params => Promise.resolve(saved.push(params))
-      })
-    }
+        456: {
+          id: 456,
+          version: 7,
+        }
+      },
+      save: params => Promise.resolve(saved.push(params))
+    })
   }
 
-  const { refresh } = refreshHandler({ 
-    eventRepositories, 
-    projectionRepositories,
+  const { refresh } = refreshServiceBuilder.build({ 
+    repository, 
+    eventAdapter,
   })
 
   const expected = [{

@@ -1,13 +1,11 @@
 const vandium = require('vandium');
 
-
-module.exports.build = ({ queries, eventHandler, refresh }) => {
+module.exports.build = ({ queries, handleEvent, refresh }) => {
   const obj = {}
   
   if (queries)
     obj.queries = vandium.generic()
       .handler(event => {
-        console.log(event)
         const { type, payload } = event
     
         if (!queries[type])
@@ -17,7 +15,7 @@ module.exports.build = ({ queries, eventHandler, refresh }) => {
       })
 
 
-  if (eventHandler)
+  if (handleEvent)
     obj.eventHandler = vandium.dynamodb(async records => {
       for (var record of records) {
         if (record.dynamodb.NewImage) {

@@ -1,22 +1,23 @@
 const { test } = require('tap')
-const eventHandler = require('../index')
+const eventServiceBuilder = require('../eventServiceBuilder')
 
-const { handleEvent } = eventHandler({
-  projectionRepositories: {
-    foo: {
-      getById: id => Promise.resolve({ 
-        version: 2,
-        state: { id, foo: 'bar' },
-        save: events => Promise.resolve({ id, events }),
-      }),
-    },
-  },
-  eventRepositories: {
-    foo: {
-      parseEvent: payload => payload,
-      loadEvents: id => Promise.resolve([ 'event1', 'event2', 'event3' ]),
-    },
-  },
+
+const repository = {
+  getById: id => Promise.resolve({ 
+    version: 2,
+    state: { id, foo: 'bar' },
+    save: events => Promise.resolve({ id, events }),
+  }),
+}
+
+const eventAdapter = {
+  parseEvent: payload => payload,
+  loadEvents: id => Promise.resolve([ 'event1', 'event2', 'event3' ]),
+}
+
+const { handleEvent } = eventServiceBuilder.build({
+  repository,
+  eventAdapter,
 })
 
 test('handleEvents', async assert => {

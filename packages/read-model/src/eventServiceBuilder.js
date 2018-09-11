@@ -24,9 +24,9 @@ module.exports.build = ({ repository, eventAdapter }) => ({
     if (version !== res.version) {
       const events = await eventAdapter.loadEvents(id, res.version)
       console.log('VERSION MISMATCH. LOADED EVENTS:', events)
-      await res.save(events)
+      return await res.save(events)
     } else {
-      await res.save(events)
+      return await res.save(events)
     }
   }
 })
