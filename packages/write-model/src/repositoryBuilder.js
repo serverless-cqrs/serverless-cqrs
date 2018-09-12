@@ -12,7 +12,7 @@
   // }
 */
 
-module.exports.build = (client, reducer) => ({
+module.exports.build = ({ client, reducer }) => ({
   getById: async id => {
     const history = await client.loadEvents(id)
     return {

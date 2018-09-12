@@ -1,21 +1,22 @@
 const { test } = require('tap')
-const proxyquire = require('proxyquire')
 
-const index = proxyquire('../index', {
-  '../../../adapters/dynamodb': {
-    makeClient: () => ({
-      loadEvents: id => Promise.resolve([
-        { foo: 'bar' },
-        { bar: 'foo' },
-        { foo: 'baz' },
-      ]),
-      append: id => Promise.resolve('success' + id)
-    })
-  }
-})
 
+
+
+const repositoryBuilder = require('../repositoryBuilder')
+const client = {
+  loadEvents: id => Promise.resolve([
+    { foo: 'bar' },
+    { bar: 'foo' },
+    { foo: 'baz' },
+  ]),
+  append: id => Promise.resolve('success' + id)
+}
 const reducer = events => events.reduce((p, c) => ({ ...p, ...c }), {})
-const repo = index('foo', reducer)
+const repo = repositoryBuilder.build({
+  client,
+  reducer,
+})
 
 test('getById', async assert => {
   const expected = {

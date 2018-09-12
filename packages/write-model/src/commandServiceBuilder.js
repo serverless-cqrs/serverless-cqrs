@@ -18,11 +18,11 @@
 */
 
 
-const mapValues = object => func => {
+const mapValues = (object, func) => {
   return Object.keys(object).reduce((p, c) => ({
     ...p,
     [ c ]: func(object[c])
-  }))
+  }), {})
 }
 
 module.exports.build = ({ actions, repository }) => {
