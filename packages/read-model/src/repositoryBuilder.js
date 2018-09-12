@@ -29,7 +29,7 @@
   
 */
 
-module.exports.build = ({ client, reducer }) => {
+module.exports.build = ({ adapter, reducer }) => {
   const applyEvents = (events, { state, version=0 }) => ({
     version: version + events.length,
     state: reducer(events, state)
@@ -37,20 +37,20 @@ module.exports.build = ({ client, reducer }) => {
     
   return {
     getById: async (id) => {
-      const { state, version } = await client.get(id)
+      const { state, version } = await adapter.get(id)
 
       return {
         state,
         version,
         save: events => {
           const reduced = applyEvents(events, { state, version })
-          return client.set(id, reduced)
+          return adapter.set(id, reduced)
         },
       }
     },
     getByIds: async (ids) => {
       const results = ids && ids.length !== 0
-        ? await client.batchGet(ids)
+        ? await adapter.batchGet(ids)
         : []
 
       return {
@@ -71,12 +71,12 @@ module.exports.build = ({ client, reducer }) => {
             }
           }, {})
 
-          return client.batchWrite(reduced)
+          return adapter.batchWrite(reduced)
         },
       }     
     },
     search: params => {
-      return client.search(params)
+      return adapter.search(params)
     }, 
   }
 }

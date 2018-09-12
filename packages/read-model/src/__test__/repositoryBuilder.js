@@ -1,7 +1,7 @@
 const { test } = require('tap')
 const repositoryBuilder = require('../repositoryBuilder')
 
-const client = {
+const adapter = {
   get: (id) => Promise.resolve({
     version: 2,
     state: {
@@ -26,7 +26,7 @@ const client = {
 const reducer = (events, state) => events.reduce((p, c) => ({ ...p, ...c }), state)
 
 const repo = repositoryBuilder.build({
-  client,
+  adapter,
   reducer,
 })
 
@@ -88,5 +88,5 @@ test('search', async assert => {
 
   assert.deepEquals(res, {
     foo: 'bar',
-  }, 'forwards search params to client')
+  }, 'forwards search params to adapter')
 })
