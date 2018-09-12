@@ -40,7 +40,7 @@ test('loadEvents', async assert => {
     },
   }
 
-  const res = await client.build('foo').loadEvents('p123')
+  const res = await client.build({ entityName: 'foo' }).loadEvents('p123')
 
   assert.deepEquals(sentParams, expectedParams, 'queries dynamodb for events')
   assert.deepEquals(res, events, 'returns parsed events')
@@ -97,7 +97,7 @@ test('scanIterator', async assert => {
   })
 
 
-  const { scanIterator } = client.build('foo')
+  const { scanIterator } = client.build({ entityName: 'foo' })
   const results = []
   
   for (let promise of scanIterator()) {
@@ -164,7 +164,7 @@ test('append', async assert => {
     ReturnValues: 'NONE'
   }
 
-  const res = await client.build('foo').append('p123', 3, events)
+  const res = await client.build({ entityName: 'foo' }).append('p123', 3, events)
 
   assert.match(sentParams, expectedParams, 'makes putItem request to dynamodb')
   
@@ -173,7 +173,7 @@ test('append', async assert => {
     callback(new Error('ConditionalCheckFailedException'))
   })
 
-  await client.build('foo').append('p123', 3, events).catch(e => {
+  await client.build({ entityName: 'foo' }).append('p123', 3, events).catch(e => {
     assert.equals(e.message('A commit already exists with the specified version'))
   })
 

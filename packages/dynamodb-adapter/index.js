@@ -1,7 +1,7 @@
 const AWS = require('aws-sdk')
 
 module.exports.makeClient = (tablename, options) => ({
-  build: entityName => {
+  build: ({ entityName }) => {
     const dynamodb = new AWS.DynamoDB(options)
 
     const parseItem = i => {
