@@ -1,3 +1,5 @@
+const pluralize = require('pluralize')
+
 const makeSignedRequest = require('./makeSignedRequest')
 const NDJSON = require('./NDJSON')
 
@@ -8,7 +10,8 @@ const parseResult = ({ _id, _version=0, _source }) => ({
 })
 
 module.exports.makeClient = ({ endpoint, region }) => ({
-  build: prefix => {
+  build: ({ entityName }) => {
+    const prefix = pluralize(entityName) + '/' + entityName
     const defaults = {
       endpoint,
       region,
