@@ -4,7 +4,7 @@ const { test } = require('tap')
 
 
 const repositoryBuilder = require('../repositoryBuilder')
-const client = {
+const adapter = {
   loadEvents: id => Promise.resolve([
     { foo: 'bar' },
     { bar: 'foo' },
@@ -14,7 +14,7 @@ const client = {
 }
 const reducer = events => events.reduce((p, c) => ({ ...p, ...c }), {})
 const repo = repositoryBuilder.build({
-  client,
+  adapter,
   reducer,
 })
 

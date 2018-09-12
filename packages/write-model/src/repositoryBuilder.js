@@ -12,12 +12,12 @@
   // }
 */
 
-module.exports.build = ({ client, reducer }) => ({
+module.exports.build = ({ adapter, reducer }) => ({
   getById: async id => {
-    const history = await client.loadEvents(id)
+    const history = await adapter.loadEvents(id)
     return {
       state: reducer(history),
-      save: events => client.append(id, history.length, events)
+      save: events => adapter.append(id, history.length, events)
     }
   },
 })
