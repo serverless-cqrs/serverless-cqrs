@@ -7,102 +7,104 @@ const parseResult = ({ _id, _version=0, _source }) => ({
   state: _source,
 })
 
-module.exports.makeClient = ({ endpoint, region }) => prefix => {
-  const defaults = {
-    endpoint,
-    region,
-    service: 'es',
-    method: 'GET',
-  }
+module.exports.makeClient = ({ endpoint, region }) => ({
+  build: prefix => {
+    const defaults = {
+      endpoint,
+      region,
+      service: 'es',
+      method: 'GET',
+    }
 
-  return {
-    set: async (id, { version, state }) => {
-      const { data } = await makeSignedRequest({
-        ...defaults,
-        method: state ? 'PUT' : 'DELETE',
-        path: '/' + prefix + '/' + encodeURIComponent(id) + '?version_type=external&version=' + version,
-        body: state,
-      })
+    return {
+      set: async (id, { version, state }) => {
+        const { data } = await makeSignedRequest({
+          ...defaults,
+          method: state ? 'PUT' : 'DELETE',
+          path: '/' + prefix + '/' + encodeURIComponent(id) + '?version_type=external&version=' + version,
+          body: state,
+        })
 
-      return data
-    },
-    get: async (id) => {
-      const { data } = await makeSignedRequest({
-        ...defaults,
-        path: '/' + prefix + '/' + encodeURIComponent(id),
-      })
-      
-      return parseResult(data)
-    },
-    batchGet: async (ids) => {
-      const { data } = await makeSignedRequest({
-        ...defaults,
-        path: '/' + prefix + '/_mget',
-        body: { ids },
-      })
-   
-      const found = data.docs.filter(r => r.found)
-      return found.map(parseResult)
-    },
-    batchWrite: async (obj) => {
-      const content = Object.keys(obj).reduce((p, id) => {
-        const { version, state } = obj[id]
-        if (!state)
-          return [ 
-            ...p, 
+        return data
+      },
+      get: async (id) => {
+        const { data } = await makeSignedRequest({
+          ...defaults,
+          path: '/' + prefix + '/' + encodeURIComponent(id),
+        })
+        
+        return parseResult(data)
+      },
+      batchGet: async (ids) => {
+        const { data } = await makeSignedRequest({
+          ...defaults,
+          path: '/' + prefix + '/_mget',
+          body: { ids },
+        })
+    
+        const found = data.docs.filter(r => r.found)
+        return found.map(parseResult)
+      },
+      batchWrite: async (obj) => {
+        const content = Object.keys(obj).reduce((p, id) => {
+          const { version, state } = obj[id]
+          if (!state)
+            return [ 
+              ...p, 
+              { 
+                delete: { 
+                  _id: id,
+                }, 
+              }
+            ]
+
+          return [
+            ...p,
             { 
-              delete: { 
-                _id: id,
-              }, 
-            }
+              index: { 
+                _id: id, 
+                _version: version, 
+                version_type: 'external',
+              }
+            },
+            state,      
           ]
+        }, [])
 
-        return [
-          ...p,
-          { 
-            index: { 
-              _id: id, 
-              _version: version, 
-              version_type: 'external',
-            }
+        const { data } = await makeSignedRequest({
+          ...defaults,
+          method: 'POST',
+          path: '/' + prefix + '/_bulk',
+          body: NDJSON.stringify(content),
+        })
+
+        return data.items.reduce((p, c) => {
+          const { _id, error } = c.index
+          if (!error) return p
+
+          return {
+            ...p,
+            [ _id ]: error
+          }
+        }, {})
+      },
+      search: async (params) => {
+        const { data } = await makeSignedRequest({
+          ...defaults,
+          path: '/' + prefix + '/_search',
+          body: { 
+            version: true,
+            ...params,
           },
-          state,      
-        ]
-      }, [])
-
-      const { data } = await makeSignedRequest({
-        ...defaults,
-        method: 'POST',
-        path: '/' + prefix + '/_bulk',
-        body: NDJSON.stringify(content),
-      })
-
-      return data.items.reduce((p, c) => {
-        const { _id, error } = c.index
-        if (!error) return p
+        })
+        
+        const { total, hits } = data.hits
 
         return {
-          ...p,
-          [ _id ]: error
+          total,
+          data: hits.map(parseResult)
         }
-      }, {})
-    },
-    search: async (params) => {
-      const { data } = await makeSignedRequest({
-        ...defaults,
-        path: '/' + prefix + '/_search',
-        body: { 
-          version: true,
-          ...params,
-        },
-      })
-      
-      const { total, hits } = data.hits
-
-      return {
-        total,
-        data: hits.map(parseResult)
-      }
-    },
+      },
+    }
   }
-}
+})
