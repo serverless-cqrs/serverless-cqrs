@@ -1,0 +1,31 @@
+{
+  "name": "serverless-cqrs",
+  "version": "0.0.1",
+  "description": "The main package for serverless-cqrs",
+  "main": "src/index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/serverless-cqrs/serverless-cqrs.git"
+  },
+  "keywords": [
+    "serverless",
+    "cqrs",
+    "eventsourcing",
+    "es"
+  ],
+  "author": "Yonah Forst",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/serverless-cqrs/serverless-cqrs/issues"
+  },
+  "homepage": "https://github.com/serverless-cqrs/serverless-cqrs#readme",
+  "dependencies": {
+    "serverless-cqrs.dynamodb-adapter": "git+https://github.com/serverless-cqrs/dynamodb-adapter.git",
+    "serverless-cqrs.elasticsearch-adapter": "git+https://github.com/serverless-cqrs/elasticsearch-adapter.git",
+    "serverless-cqrs.read-model": "git+https://github.com/serverless-cqrs/read-model.git",
+    "serverless-cqrs.write-model": "git+https://github.com/serverless-cqrs/write-model.git"
+  }
+}
