@@ -1,6 +1,6 @@
 const AWS = require('aws-sdk')
 
-module.exports.makeClient = ({ tablename, awsOptions }) => ({
+module.exports.makeClient = ({ tableName, awsOptions }) => ({
   build: ({ entityName }) => {
     const dynamodb = new AWS.DynamoDB(awsOptions)
 
@@ -19,7 +19,7 @@ module.exports.makeClient = ({ tablename, awsOptions }) => ({
       parseEvent: parseItem,
       loadEvents: (entityId, version=0) => {
         const params = {
-          TableName: tablename,
+          TableName: tableName,
           ConsistentRead: true,
           KeyConditionExpression: 'entityId = :id and version >= :v',
           ExpressionAttributeValues: {
@@ -41,7 +41,7 @@ module.exports.makeClient = ({ tablename, awsOptions }) => ({
         let done = false
 
         const params = {
-          TableName: tablename,
+          TableName: tableName,
           FilterExpression: 'entityName = :entityName',
           ExpressionAttributeValues: {
             ':entityName': { S: entityName },
@@ -67,7 +67,7 @@ module.exports.makeClient = ({ tablename, awsOptions }) => ({
         const commitId = date + ':' + entityId
 
         const params = {
-          TableName: tablename,
+          TableName: tableName,
           Item: {
             commitId: { S: commitId },
             committedAt: { N: now.toString() },
