@@ -27,19 +27,13 @@ const mapValues = (object, func) => {
 
 module.exports.build = ({ actions, repository }) => {
   return mapValues(actions, action => {
-    return async (id, args) => {
+    return async (id, payload) => {
       const { state, save } = await repository.getById(id)
 
-      // here is a way to allow command services to augment the default built
-      // command. By providing a function, they are given the current state
-      // and can dynamically modify the contents of the payload depending
-      // for example, to load additional resources.
-      const payload = typeof args === 'function'
-        ? await args(state)
-        : args
+      const events = action(state, payload)
 
-      const event = action(state, payload)
-      await save(event)
+      await save(events)
+
       return true
     }
   })
