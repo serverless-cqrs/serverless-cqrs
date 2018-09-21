@@ -6,7 +6,7 @@ module.exports = ({ endpoint, path, body, service, method, region }) => {
 		let req = new AWS.HttpRequest(url, region);
     req.method = method
     req.headers.host = req.endpoint.host
-    req.headers['Content-Type'] = 'multipart/form-data';
+    req.headers['Content-Type'] = 'application/json';
     req.body = body
 
     let signer = new AWS.Signers.V4(req, service, true);
