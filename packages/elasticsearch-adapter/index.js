@@ -34,6 +34,11 @@ module.exports.makeClient = ({ endpoint, region }) => ({
         const { data } = await makeSignedRequest({
           ...defaults,
           path: '/' + prefix + '/' + encodeURIComponent(id),
+        }).catch(e => {
+          if (e.response.status === 404)
+            return e.response
+            
+          throw e
         })
         
         return parseResult(data)
