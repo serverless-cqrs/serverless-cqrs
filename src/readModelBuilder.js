@@ -3,6 +3,7 @@ const {
   queryServiceBuilder,
   eventServiceBuilder,
   refreshServiceBuilder,
+  serverlessHandlerBuilder,
 } = require('serverless-cqrs.read-model')
 
 const dynamoAdapter = require('serverless-cqrs.dynamodb-adapter')
@@ -18,6 +19,8 @@ const makeClient = ({ adapter, options }) => {
       throw 'Unknown client adapter: ' + adapter
   }
 }
+
+module.exports.buildHandler = serverlessHandlerBuilder
 
 module.exports.build = ({ 
   entityName, 
