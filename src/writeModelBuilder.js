@@ -15,7 +15,7 @@ const makeClient = ({ adapter, options }) => {
   }
 }
 
-module.exports.buildHandler = serverlessHandlerBuilder
+module.exports.serverlessHandler = serverlessHandlerBuilder
 
 module.exports.build = ({ 
   entityName, 
