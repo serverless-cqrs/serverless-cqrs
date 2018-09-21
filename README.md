@@ -15,3 +15,6 @@ This project combines concepts from [CQRS](http://www.cqrs.nu/Faq/command-query-
     - **Query**: Methods for retrieving the current state(s) of entities
     - **Events**: Listens for new events as they are saved to the the datastore. As events arrive, update the stored projections.
     - **Refresh**: Loads past events and applies them to projections (if not yet applied). Useful for rebuilding your projections when something changes
+
+Further reading:
+https://medium.com/@teivah/1-year-of-event-sourcing-and-cqrs-fb9033ccd1c6
