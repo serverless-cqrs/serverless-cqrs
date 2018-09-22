@@ -9,6 +9,38 @@ const {
   buildDynamoStreamHandler,
 } = require('../index')
 
+
+test('commands', async assert => {
+  const handler = buildCommands({
+    foo: (id, payload) => Promise.resolve({ id, payload }),
+  })
+
+  const expected = {
+    id: '123',
+    payload: {
+      bar: 'baz',
+    },
+  }
+  
+  await handler({
+    type: 'foo',
+    id: '123',
+    payload: {
+      bar: 'baz',
+    }
+  }, null, (e, res) => {
+    assert.false(e)
+    assert.deepEquals(res, expected, 'forwards payload to query')
+  })
+  
+  await handler({
+    type: 'bar',
+  }, null, (e, res) => {
+    assert.equals(e, 'not supported: bar', 'throws error if method is not supported')
+    assert.false(res)
+  })
+})
+
 test('queries', async assert => {
   const handler = buildQueries({
     foo: params => Promise.resolve(params),
