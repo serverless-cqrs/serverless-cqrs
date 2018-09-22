@@ -22,8 +22,5 @@
   "bugs": {
     "url": "https://github.com/serverless-cqrs/write-model/issues"
   },
-  "homepage": "https://github.com/serverless-cqrs/write-model#readme",
-  "dependencies": {
-    "vandium": "^4.8.0"
-  }
+  "homepage": "https://github.com/serverless-cqrs/write-model#readme"
 }
