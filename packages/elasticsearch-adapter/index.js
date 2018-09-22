@@ -10,7 +10,7 @@ const parseResult = ({ _id, _version=0, _source }) => ({
 })
 
 module.exports.makeClient = ({ endpoint, region }) => ({
-  build: ({ entityName }) => {
+  build: entityName => {
     const prefix = pluralize(entityName) + '/' + entityName
     const defaults = {
       endpoint,

@@ -9,7 +9,7 @@ test('set', assert => {
 		endpoint: 'https://foobar.com',
 	  region: 'eu-west-1',
 	})
-	const storage = client.build({ entityName: 'foo' })
+	const storage = client.build('foo')
 	
 	const expected = {
 		endpoint: 'https://foobar.com',
@@ -43,7 +43,7 @@ test('get', assert => {
 		endpoint: 'https://foobar.com',
 	  region: 'eu-west-1',
 	})
-	const storage = client.build({ entityName: 'foo' })
+	const storage = client.build('foo')
 
 
 	const expected = {
@@ -82,7 +82,7 @@ test('batchGet', assert => {
 		endpoint: 'https://foobar.com',
 	  region: 'eu-west-1',
 	})
-	const storage = client.build({ entityName: 'foo' })
+	const storage = client.build('foo')
 
 	const expected = [{
 		id: '123',
@@ -121,7 +121,7 @@ test('batchWrite', assert => {
 		endpoint: 'https://foobar.com',
 	  region: 'eu-west-1',
 	})
-	const storage = client.build({ entityName: 'foo' })
+	const storage = client.build('foo')
 
 	const params = {
 		'123': {
