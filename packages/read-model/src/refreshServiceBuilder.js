@@ -10,7 +10,12 @@
   if they don't match, we don't throw an error, just ignore that event. 
 */
 
-const groupBy = require('lodash.groupby')
+const groupBy = (array, key) => array.reduce((p, c) => {
+  const k = c[key]
+  if (!p[k]) p[k] = []
+  p[k].push(c)
+  return p
+}, {})
 
 module.exports.build = ({ repository, eventAdapter }) => ({
   refresh: async () => {    
