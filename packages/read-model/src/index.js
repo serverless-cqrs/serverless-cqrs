@@ -3,5 +3,4 @@ module.exports = {
   queryServiceBuilder: require('./queryServiceBuilder'),
   refreshServiceBuilder: require('./refreshServiceBuilder'),
   repositoryBuilder: require('./repositoryBuilder'),
-  serverlessHandlerBuilder: require('./serverlessHandlerBuilder'),
 }
