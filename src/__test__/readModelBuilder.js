@@ -8,29 +8,16 @@ const defaultStubs = {
     queryServiceBuilder: { build },
     eventServiceBuilder: { build },
     refreshServiceBuilder: { build },  
-  },
-  'serverless-cqrs.dynamodb-adapter': {
-    makeClient: () => ({ build })
-  },
-  'serverless-cqrs.elasticsearch-adapter': {
-    makeClient: () => ({ build })
-  },
+  }
 }
 
 const reducer = (p, c) => ({ ...p, ...c })
 
 const defaultOptions = {
-  entityName: 'fooBar', 
-  clientConfig: {
-    adapter: 'elasticsearch',
-  },
-  eventClientConfig: {
-    adapter: 'dynamodb',
-  },
+  adapter: 'barfoo',
+  eventAdapter: 'foobar',
   reducer,
 }
-
-
 
 test('handelEvent', async assert => {
   const readModelBuilder = proxyquire('../readModelBuilder', {
@@ -46,13 +33,9 @@ test('handelEvent', async assert => {
   })
 
   const expected = {
-    eventAdapter: {
-      entityName: 'fooBar',
-    },
+    eventAdapter: 'foobar',
     repository: {
-      adapter: {
-        entityName: 'fooBar',
-      },
+      adapter: 'barfoo',
       reducer,
     }
   }
@@ -77,13 +60,9 @@ test('refresh', async assert => {
   })
 
   const expected = {
-    eventAdapter: {
-      entityName: 'fooBar',
-    },
+    eventAdapter: 'foobar',
     repository: {
-      adapter: {
-        entityName: 'fooBar',
-      },
+      adapter: 'barfoo',
       reducer,
     }
   }
@@ -106,15 +85,10 @@ test('getById', async assert => {
       }
     },
   })
-
   const expected = {
-    eventAdapter: {
-      entityName: 'fooBar',
-    },
+    eventAdapter: 'foobar',
     repository: {
-      adapter: {
-        entityName: 'fooBar',
-      },
+      adapter: 'barfoo',
       reducer,
     }
   }
@@ -139,13 +113,9 @@ test('getByIds', async assert => {
   })
 
   const expected = {
-    eventAdapter: {
-      entityName: 'fooBar',
-    },
+    eventAdapter: 'foobar',
     repository: {
-      adapter: {
-        entityName: 'fooBar',
-      },
+      adapter: 'barfoo',
       reducer,
     }
   }
@@ -170,13 +140,9 @@ test('search', async assert => {
   })
 
   const expected = {
-    eventAdapter: {
-      entityName: 'fooBar',
-    },
+    eventAdapter: 'foobar',
     repository: {
-      adapter: {
-        entityName: 'fooBar',
-      },
+      adapter: 'barfoo',
       reducer,
     }
   }

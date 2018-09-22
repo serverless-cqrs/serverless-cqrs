@@ -1,43 +1,16 @@
 const {
   repositoryBuilder,
   commandServiceBuilder,
-  serverlessHandlerBuilder,
 } = require('serverless-cqrs.write-model')
 
-const dynamoAdapter = require('serverless-cqrs.dynamodb-adapter')
-
-const makeClient = ({ adapter, options }) => {
-  switch (adapter) {
-    case 'dynamodb':
-      return dynamoAdapter.makeClient(options)
-    default:
-      throw 'Unknown client adapter: ' + adapter
-  }
-}
-
-module.exports.serverlessHandler = serverlessHandlerBuilder
-
 module.exports.build = ({ 
-  entityName, 
   actions, 
   reducer,
-  client,
-  clientConfig={},
+  adapter,
 }) => {
-
-  console.log(clientConfig)
-  if (!client) {
-    client = makeClient(clientConfig)
-  }
   
   // *** REPOSITORY ***
-  // First let's get our database adapter. This is the module that knows how to talk 
-  // to the underlying database
-  const adapter = client.build({
-    entityName,
-  })
-  
-  // then we use the adapter and the reducer to create a Repository. 
+  // First lets use the adapter and the reducer to create a Repository. 
   // This is the layer that can return the current state of an entity
   // it can also take new events and append them to the entities event stream.
   const repository = repositoryBuilder.build({

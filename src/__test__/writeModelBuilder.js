@@ -7,10 +7,7 @@ const writeModelBuilder = proxyquire('../writeModelBuilder', {
   'serverless-cqrs.write-model': {
     repositoryBuilder: { build },
     commandServiceBuilder: { build },
-  },
-  'serverless-cqrs.dynamodb-adapter': {
-    makeClient: () => ({ build })
-  },
+  }
 })
 
 test('build', async assert => {
@@ -22,18 +19,13 @@ test('build', async assert => {
   const expected = {
     actions,
     repository: {
-      adapter: {
-        entityName: 'fooBar',
-      },
+      adapter: 'foobar',
       reducer,
     }
   }
 
   const readModel = writeModelBuilder.build({
-    entityName: 'fooBar', 
-    clientConfig: {
-      adapter: 'dynamodb',
-    },
+    adapter: 'foobar',
     reducer,
     actions,
   })
