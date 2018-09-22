@@ -23,8 +23,6 @@
   },
   "homepage": "https://github.com/serverless-cqrs/serverless-cqrs#readme",
   "dependencies": {
-    "serverless-cqrs.dynamodb-adapter": "git+https://github.com/serverless-cqrs/dynamodb-adapter.git",
-    "serverless-cqrs.elasticsearch-adapter": "git+https://github.com/serverless-cqrs/elasticsearch-adapter.git",
     "serverless-cqrs.read-model": "git+https://github.com/serverless-cqrs/read-model.git",
     "serverless-cqrs.write-model": "git+https://github.com/serverless-cqrs/write-model.git"
   }
