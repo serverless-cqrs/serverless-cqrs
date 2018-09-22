@@ -1,0 +1,27 @@
+{
+  "name": "serverless-cqrs.lambda-handlers",
+  "version": "0.0.1",
+  "description": "Build serverless-cqrs handlers for AWS Lambda",
+  "main": "src/index.js",
+  "scripts": {
+    "test": "tap src/__test__/*.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/serverless-cqrs/lambda-handlers.git"
+  },
+  "keywords": [
+    "serverless",
+    "cqrs",
+    "eventsourcing",
+    "es",
+    "lambda"
+  ],
+  "author": "Yonah Forst",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/serverless-cqrs/lambda-handlers/issues"
+  },
+  "homepage": "https://github.com/serverless-cqrs/lambda-handlers#readme",
+  "dependencies": {}
+}
