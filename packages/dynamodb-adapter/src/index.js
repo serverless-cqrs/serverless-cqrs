@@ -1,6 +1,7 @@
 const AWS = require('aws-sdk')
+const cuid = require('cuid')
 
-module.exports.makeClient = ({ tableName, ...awsOptions }) => ({
+module.exports.makeClient = ({ tableName, indexName, ...awsOptions }) => ({
   build: ({ entityName }) => {
     const dynamodb = new AWS.DynamoDB(awsOptions)
 
@@ -11,7 +12,8 @@ module.exports.makeClient = ({ tableName, ...awsOptions }) => ({
         id: i.entityId.S,
         version: parseInt(i.version.N),
         entity: i.entityName.S,
-        events: JSON.parse(i.events.S),          
+        commitId: i.commitId.S,
+        events: JSON.parse(i.events.S),
       }
     }
 
@@ -35,23 +37,26 @@ module.exports.makeClient = ({ tableName, ...awsOptions }) => ({
             return Items.reduce((p, c) => [ ...p, ...JSON.parse(c.events.S) ], [])
           })
       },
-      scanIterator: function* () {
+      commitIterator: function* ({ commitId='0' }={}) {
         //we can simplify this once lambda supports node 10.x
         //more info: http://2ality.com/2016/10/asynchronous-iteration.html
         let done = false
 
         const params = {
           TableName: tableName,
-          FilterExpression: 'entityName = :entityName',
+          IndexName: indexName,
+          KeyConditionExpression: 'entityName = :entityName and commitId > :commitId',
           ExpressionAttributeValues: {
             ':entityName': { S: entityName },
+            ':commitId': { S: commitId },
           },
           ExclusiveStartKey: null,
           Limit: 500,
         }
+
         while (!done) {
           yield dynamodb
-            .scan(params)
+            .query(params)
             .promise()
             .then(({ Items, LastEvaluatedKey }) => {
               params.ExclusiveStartKey = LastEvaluatedKey
@@ -63,8 +68,7 @@ module.exports.makeClient = ({ tableName, ...awsOptions }) => ({
       },
       append: (entityId, version, events) => {
         const now = Date.now()
-        const date = new Date(now).toISOString().replace(/[^0-9]/g, '')
-        const commitId = date + ':' + entityId
+        const commitId = cuid()
 
         const params = {
           TableName: tableName,

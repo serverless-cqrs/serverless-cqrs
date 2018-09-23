@@ -6,7 +6,10 @@ const AWS_SDK = require('aws-sdk')
 AWS.setSDKInstance(AWS_SDK);
 
 const { makeClient } = require('../index')
-const client = makeClient('fooTable')
+const client = makeClient({ 
+  tableName: 'fooTable', 
+  indexName: 'fooIndex',
+})
 
 test('loadEvents', async assert => {
   var sentParams
@@ -50,7 +53,7 @@ test('loadEvents', async assert => {
 })
 
 
-test('scanIterator', async assert => {
+test('commitIterator', async assert => {
   var sentParams
   var i = 0
   const events = [ 
@@ -67,7 +70,7 @@ test('scanIterator', async assert => {
     'ten',
   ]
 
-  AWS.mock('DynamoDB', 'scan', function (params, callback) {
+  AWS.mock('DynamoDB', 'query', function (params, callback) {
     sentParams = params
 
     const e = events.slice(i, ++i)
@@ -76,6 +79,9 @@ test('scanIterator', async assert => {
       Items: [{ 
         entityId: {
           S: 'e123',
+        },
+        commitId: {
+          S: 'c123',
         },
         entityName: {
           S: 'foo',
@@ -97,16 +103,17 @@ test('scanIterator', async assert => {
   })
 
 
-  const { scanIterator } = client.build({ entityName: 'foo' })
+  const { commitIterator } = client.build({ entityName: 'foo' })
   const results = []
   
-  for (let promise of scanIterator()) {
+  for (let promise of commitIterator()) {
     const res = await promise
     
     results.push(...res)
 
     const expectedParams = {
       TableName: 'fooTable',
+      IndexName: 'fooIndex',
       Limit: 500,
       ExclusiveStartKey: i < events.length
         ? { HASH: { N: i.toString() } }
@@ -115,8 +122,11 @@ test('scanIterator', async assert => {
         ':entityName': {
           'S': 'foo',
         },
+        ':commitId': {
+          'S': '0'
+        },
       },
-      FilterExpression: 'entityName = :entityName',
+      KeyConditionExpression: 'entityName = :entityName and commitId > :commitId',
     }
 
     assert.deepEquals(sentParams, expectedParams, 'scans dynamodb using ExclusiveStartKey key')
@@ -125,6 +135,7 @@ test('scanIterator', async assert => {
   const expected = events.map(( e, i ) => ({
     id: 'e123',
     entity: 'foo',
+    commitId: 'c123',
     version: i + 1,
     events: [ e ],
   }))
@@ -153,7 +164,7 @@ test('append', async assert => {
   
   const expectedParams = {
     Item: {
-      commitId: { S: /\d*:p123/ },
+      commitId: { S: /\w*/ },
       committedAt: { N: /\d*/ },
       entityId: { S: 'p123' },
       entityName: { S: 'foo' },
@@ -164,7 +175,7 @@ test('append', async assert => {
     ReturnValues: 'NONE'
   }
 
-  const res = await client.build({ entityName: 'foo' }).append('p123', 3, events)
+  await client.build({ entityName: 'foo' }).append('p123', 3, events)
 
   assert.match(sentParams, expectedParams, 'makes putItem request to dynamodb')
   
