@@ -30,6 +30,26 @@ const repo = repositoryBuilder.build({
   reducer,
 })
 
+test('getMetadata', async assert => {
+  const res = await repo.getMetadata()
+  assert.deepEquals(res.version, 2, 'returns the version')
+
+  assert.deepEquals(res.state, {
+    foo: 'bar',
+  }, 'returns the state')
+
+
+  const savedRes = await res.save([{ baz: 'bar' }, { bar: 'baz' }])
+
+  assert.deepEquals(savedRes, {
+    id: '__meta__',
+    version: 4,
+    state: {
+      bar: 'baz',
+    }
+  }, 'saves the last commit and increments version')
+})
+
 test('getById', async assert => {
   const res = await repo.getById('123')
   assert.deepEquals(res.version, 2, 'returns the version')
