@@ -17,49 +17,73 @@ const groupBy = (array, key) => array.reduce((p, c) => {
   return p
 }, {})
 
-module.exports.build = ({ repository, eventAdapter }) => ({
-  refresh: async () => {    
-    const eventsIterator = eventAdapter.scanIterator()
+const mapValues = (obj, func) => Object.keys(obj).reduce((p, c) => {
+  return {
+    ...p,
+    [ c ]: func(obj[c]),
+  }
+}, {})
 
-    for (let promise of eventsIterator) {
-      // in node v8 , you can't use async inside generators, so we return a promise and await for it here
-      const events = await promise 
+const extractEvents = array => array.reduce((p, c) => [
+  ...p,
+  ...c.events,
+], [])
 
-      // group events by id, so we can load the projection records
-      const eventsById = groupBy(events, 'id') 
-      const ids = Object.keys(eventsById)
-    
-      const { results, save } = await repository.getByIds(ids)
-    
-      // we need to make sure that we apply events to projections in order, and that we dont skip or double-apply any events
-      // we look at the version of the projection (which counts events used to dervie the current state) and compare it to the
-      // vesion of the the event (which counts all previous events). Those version numbers should match. If they don't, it means that we
-      // are either missing an event, or we already applied this one. Either way, we ignore this event and continue.
-      // TODO: maybe we should in fact throw, if we are missing an event, because that means we will never catch up.
 
-      const validEventsById = ids.reduce((p, id) => {
-        //a projection's version number is a count of records used to derive the current state
-        const existingVersion = results[id] && results[id].version 
+const sanitizeCommits = (groupedCommits, projections) => {
+  // we look at the version of the projection (which counts events used to dervie the current state) and compare it to the
+  // vesion of the the event (which counts all previous events). Those version numbers should match. If they don't, it means that we
+  // are either missing an event, or we already applied this one.
+  // if the projection has a HIGHER version number it means we already applied this commit, so we can safely ignore it.
+  // if the projection has a LOWER version number, it means that we're missing some commits and our store is inconsistent, so we throw.
 
-        //an event's version number is the count of all preceding events.
-        const eventVersion = eventsById[id][0].version 
+  return Object.keys(groupedCommits).reduce((pre, id) => {
+    const [ commit ] = groupedCommits[id] // get the first commit
+    const record = projections[id] || { version: 0 }
         
-        if (existingVersion && existingVersion !== eventVersion) {
-          console.error('inconsecutive', id, existingVersion, eventVersion)
-          return p
-        }
-    
-        return {
-          ...p,
-          [ id ]: eventsById[id].reduce((p, c) => [ ...p, ...c.events ], [])
-        }
-      }, {})
+    if (record.version > commit.version)
+      return pre // skip if we already applied this version
 
-      const length = Object.keys(validEventsById).length
+    if (record.version < commit.version) {
+      console.error(JSON.stringify({ record, commit }, null, 2))
+      throw 'missingVersions' // throw if we're missing a version
+    }
     
-      console.log('processed events:', events.length, 'updated records:', length)
-      if (length > 0)
-        await save(validEventsById)
+    return {
+      ...pre,
+      [ id ]: groupedCommits[id],
+    }
+  }, {})
+}
+
+
+module.exports.build = ({ repository, eventAdapter }) => ({
+  refresh: async () => {
+    while (true) {
+      // load new commits
+      const meta = await repository.getMetadata()
+      const commits = await eventAdapter.listCommits(meta.state) 
+
+      if (commits.length == 0) // if there are no more commits to process, return
+        return
+
+      // group commits by id, so we can load the projection records
+      const commitsById = groupBy(commits, 'id') 
+      const ids = Object.keys(commitsById)
+    
+      // load existing projections from repository
+      const projections = await repository.getByIds(ids)
+      
+      // we need to make sure that we apply events to projections in order, and that we dont skip or double-apply any events
+      const sanitized = sanitizeCommits(commitsById, projections.results)
+      
+      // extract the events and send them to the projections
+      const events = mapValues(sanitized, extractEvents)
+      await projections.save(events)
+
+      await meta.save(commits)
+
+      console.log('processed commits:', commits.length, 'updated records:', Object.keys(sanitized).length)
     }
   }
 })

@@ -5,32 +5,43 @@ const refreshServiceBuilder = require('../refreshServiceBuilder')
 const events = [{
   id: 123,
   version: 3,
+  commitId: 'a',
   events: [ 'event1' ],
 }, {
   id: 123,
   version: 4,
+  commitId: 'b',
   events: [ 'event2', 'event3' ],
 }, {
   id: 456,
   version: 7,
+  commitId: 'c',
   events: [ 'event3', 'event4', 'event5' ],
 }, {
   id: 789,
-  version: 9,
+  version: 0,
+  commitId: 'd',
   events: [ 'event1', 'event2' ],
 }]
 
 const eventAdapter = {
-  scanIterator: function* iterate () {
-    yield Promise.resolve(events.slice(0, 3))
-    yield Promise.resolve(events.slice(3))
+  listCommits: ({ commitId }={}) => {
+    const startAt = events.findIndex(e => e.commitId === commitId) + 1
+    return Promise.resolve(events.slice(startAt, startAt + 3))
   },
 }
 
 
 test('handles consecutive events', async assert => {
   const saved = []
+  var meta
   const repository = {
+    getMetadata: () => {
+      return Promise.resolve({
+        state: meta,
+        save: commits => meta = commits[commits.length - 1],
+      })
+    },
     getByIds: () => Promise.resolve({
       results: {
         123: {
@@ -65,7 +76,14 @@ test('handles consecutive events', async assert => {
 
 test('doesnt handle inconsecutive events', async assert => {
   const saved = []
+  var meta
   const repository = {
+    getMetadata: () => {
+      return Promise.resolve({
+        state: meta,
+        save: commits => meta = commits[commits.length -1],
+      })
+    },
     getByIds: () => Promise.resolve({
       results: {
         123: {
