@@ -1,4 +1,4 @@
-module.exports.build = ({ repository, eventAdapter }) => ({
+module.exports.build = ({ repository }) => ({
   getById: async ({ id }) => {
     const { state } = await repository.getById(id)
     return { id, ...state }
