@@ -79,11 +79,13 @@ module.exports.build = ({ repository, eventAdapter }) => ({
       
       // extract the events and send them to the projections
       const events = mapValues(sanitized, extractEvents)
-      await projections.save(events)
+      const length = Object.keys(sanitized).length
+      if (length > 0)
+        await projections.save(events)
 
       await meta.save(commits)
 
-      console.log('processed commits:', commits.length, 'updated records:', Object.keys(sanitized).length)
+      console.log('processed commits:', commits.length, 'updated records:', length)
     }
   }
 })
