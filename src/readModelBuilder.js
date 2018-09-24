@@ -36,8 +36,9 @@ module.exports.build = ({
   })
 
   // next let's initialize the refresh service.
-  // we'll use this if we ever want manually load events,
-  // like if we make a schema change and we need to rebuild all projections.
+  // we'll use this to load any new events
+  // like if we make a schema change and we need to rebuild all projections
+  // or if a query asks for strong consistency.
   const refreshService = refreshServiceBuilder.build({
     repository,
     eventAdapter,
@@ -45,11 +46,8 @@ module.exports.build = ({
 
   // finally we'll initialize the query service, our main interface 
   // for accessing projections.
-  // the query service optionaly takes an event adapter, if we want to
-  // be able to use strong consistency
   const queryService = queryServiceBuilder.build({
     repository,
-    eventAdapter,
   })
 
   return {

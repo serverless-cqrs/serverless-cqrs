@@ -86,7 +86,6 @@ test('getById', async assert => {
     },
   })
   const expected = {
-    eventAdapter: 'foobar',
     repository: {
       adapter: 'barfoo',
       reducer,
@@ -113,7 +112,6 @@ test('getByIds', async assert => {
   })
 
   const expected = {
-    eventAdapter: 'foobar',
     repository: {
       adapter: 'barfoo',
       reducer,
@@ -140,7 +138,6 @@ test('search', async assert => {
   })
 
   const expected = {
-    eventAdapter: 'foobar',
     repository: {
       adapter: 'barfoo',
       reducer,
