@@ -11,7 +11,7 @@ const repository = {
 }
 
 const eventAdapter = {
-  parseEvent: payload => payload,
+  parseCommit: payload => payload,
   loadEvents: id => Promise.resolve([ 'event1', 'event2', 'event3' ]),
 }
 
