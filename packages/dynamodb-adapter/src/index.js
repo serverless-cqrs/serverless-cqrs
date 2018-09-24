@@ -5,7 +5,7 @@ module.exports.makeClient = ({ tableName, indexName, ...awsOptions }) => ({
   build: ({ entityName }) => {
     const dynamodb = new AWS.DynamoDB(awsOptions)
 
-    const parseItem = i => {
+    const parseCommit = i => {
       if (i.entityName.S !== entityName) return
 
       return {
@@ -18,7 +18,7 @@ module.exports.makeClient = ({ tableName, indexName, ...awsOptions }) => ({
     }
 
     return {
-      parseEvent: parseItem,
+      parseCommit,
       loadEvents: (entityId, version=0) => {
         const params = {
           TableName: tableName,
@@ -37,11 +37,7 @@ module.exports.makeClient = ({ tableName, indexName, ...awsOptions }) => ({
             return Items.reduce((p, c) => [ ...p, ...JSON.parse(c.events.S) ], [])
           })
       },
-      commitIterator: function* ({ commitId='0' }={}) {
-        //we can simplify this once lambda supports node 10.x
-        //more info: http://2ality.com/2016/10/asynchronous-iteration.html
-        let done = false
-
+      listCommits: ({ commitId='0' }={}) => {
         const params = {
           TableName: tableName,
           IndexName: indexName,
@@ -50,21 +46,14 @@ module.exports.makeClient = ({ tableName, indexName, ...awsOptions }) => ({
             ':entityName': { S: entityName },
             ':commitId': { S: commitId },
           },
-          ExclusiveStartKey: null,
-          Limit: 500,
         }
 
-        while (!done) {
-          yield dynamodb
-            .query(params)
-            .promise()
-            .then(({ Items, LastEvaluatedKey }) => {
-              params.ExclusiveStartKey = LastEvaluatedKey
-              done = !LastEvaluatedKey
-              
-              return Items.map(parseItem)
-            })
-        }
+        return dynamodb
+          .query(params)
+          .promise()
+          .then(({ Items }) => {              
+            return Items.map(parseCommit)
+          })
       },
       append: (entityId, version, events) => {
         const now = Date.now()

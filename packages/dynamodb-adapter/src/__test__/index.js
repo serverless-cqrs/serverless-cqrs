@@ -53,9 +53,8 @@ test('loadEvents', async assert => {
 })
 
 
-test('commitIterator', async assert => {
+test('listCommits', async assert => {
   var sentParams
-  var i = 0
   const events = [ 
     'zero',
     'one',
@@ -70,80 +69,67 @@ test('commitIterator', async assert => {
     'ten',
   ]
 
+  const commits = events.map(( e, i ) => ({
+    id: 'e123',
+    entity: 'foo',
+    commitId: 'c' + i.toString(),
+    version: i + 1,
+    events: [ e ],
+  }))
+
+
   AWS.mock('DynamoDB', 'query', function (params, callback) {
     sentParams = params
 
-    const e = events.slice(i, ++i)
-
     var response = { 
-      Items: [{ 
+      Items: commits.map(c => ({ 
         entityId: {
-          S: 'e123',
+          S: c.id,
         },
         commitId: {
-          S: 'c123',
+          S: c.commitId,
         },
         entityName: {
-          S: 'foo',
+          S: c.entity,
         },
         version: {
-          N: i.toString(),
+          N: c.version.toString(),
         },
         events: { 
-          S: JSON.stringify(e) ,
+          S: JSON.stringify(c.events) ,
         }, 
-      }] 
-    }
-
-    if (i < events.length) {
-      response.LastEvaluatedKey = { HASH: { N: i.toString() } }
+      }))
     }
 
     callback(null, response)
   })
 
 
-  const { commitIterator } = client.build({ entityName: 'foo' })
-  const results = []
-  
-  for (let promise of commitIterator()) {
-    const res = await promise
-    
-    results.push(...res)
+  const { listCommits } = client.build({ entityName: 'foo' })
 
-    const expectedParams = {
-      TableName: 'fooTable',
-      IndexName: 'fooIndex',
-      Limit: 500,
-      ExclusiveStartKey: i < events.length
-        ? { HASH: { N: i.toString() } }
-        : null,
-      ExpressionAttributeValues: {
-        ':entityName': {
-          'S': 'foo',
-        },
-        ':commitId': {
-          'S': '0'
-        },
+  const results = await listCommits()
+
+  const expectedParams = {
+    TableName: 'fooTable',
+    IndexName: 'fooIndex',
+    ExpressionAttributeValues: {
+      ':entityName': {
+        'S': 'foo',
       },
-      KeyConditionExpression: 'entityName = :entityName and commitId > :commitId',
-    }
-
-    assert.deepEquals(sentParams, expectedParams, 'scans dynamodb using ExclusiveStartKey key')
-
+      ':commitId': {
+        'S': '0'
+      },
+    },
+    KeyConditionExpression: 'entityName = :entityName and commitId > :commitId',
   }
-  const expected = events.map(( e, i ) => ({
-    id: 'e123',
-    entity: 'foo',
-    commitId: 'c123',
-    version: i + 1,
-    events: [ e ],
-  }))
 
-  assert.deepEquals(results, expected, 'returns all events')
+  assert.deepEquals(sentParams, expectedParams, 'queries dynamodb')
+
+
+  assert.deepEquals(results, commits, 'returns all events')
   
 
-  AWS.restore('DynamoDB', 'scan')
+  AWS.restore('DynamoDB', 'query')
 })
 
 
