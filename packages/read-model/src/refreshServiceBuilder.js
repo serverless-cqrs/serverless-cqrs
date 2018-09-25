@@ -36,10 +36,15 @@ const sanitizeCommits = (groupedCommits, projections) => {
   // are either missing an event, or we already applied this one.
   // if the projection has a HIGHER version number it means we already applied this commit, so we can safely ignore it.
   // if the projection has a LOWER version number, it means that we're missing some commits and our store is inconsistent, so we throw.
+  
+  const projectionsById = projections.reduce((p, c) => ({
+    ...p,
+    [c.id]: c
+  }), {})
 
   return Object.keys(groupedCommits).reduce((pre, id) => {
     const [ commit ] = groupedCommits[id] // get the first commit
-    const record = projections[id] || { version: 0 }
+    const record = projectionsById[id] || { version: 0 }
         
     if (record.version > commit.version)
       return pre // skip if we already applied this version

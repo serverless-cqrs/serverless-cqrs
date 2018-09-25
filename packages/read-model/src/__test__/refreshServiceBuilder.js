@@ -43,16 +43,13 @@ test('handles consecutive events', async assert => {
       })
     },
     getByIds: () => Promise.resolve({
-      results: {
-        123: {
-          id: 123,
-          version: 3,
-        },
-        456: {
-          id: 456,
-          version: 7,
-        }
-      },
+      results: [{
+        id: 123,
+        version: 3,
+      }, {
+        id: 456,
+        version: 7,
+      }],
       save: params => Promise.resolve(saved.push(params))
     }),
   }
@@ -85,16 +82,13 @@ test('doesnt handle inconsecutive events', async assert => {
       })
     },
     getByIds: () => Promise.resolve({
-      results: {
-        123: {
-          id: 123,
-          version: 5,
-        },
-        456: {
-          id: 456,
-          version: 7,
-        }
-      },
+      results: [{
+        id: 123,
+        version: 5,
+      }, {
+        id: 456,
+        version: 7,
+      }],
       save: params => Promise.resolve(saved.push(params))
     })
   }
