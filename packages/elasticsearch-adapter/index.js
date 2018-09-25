@@ -25,7 +25,7 @@ module.exports.makeClient = ({ endpoint, region }) => ({
           ...defaults,
           method: state ? 'PUT' : 'DELETE',
           path: '/' + prefix + '/' + encodeURIComponent(id) + '?version_type=external&version=' + version,
-          body: state,
+          body: JSON.stringify(state),
         })
 
         return data
@@ -47,7 +47,7 @@ module.exports.makeClient = ({ endpoint, region }) => ({
         const { data } = await makeSignedRequest({
           ...defaults,
           path: '/' + prefix + '/_mget',
-          body: { ids },
+          body: JSON.stringify({ ids }),
         })
     
         const found = data.docs.filter(r => r.found)
@@ -87,7 +87,7 @@ module.exports.makeClient = ({ endpoint, region }) => ({
         })
 
         return data.items.reduce((p, c) => {
-          const { _id, error } = c.index
+          const { _id, error } = c.index || c.delete
           if (!error) return p
 
           return {
@@ -100,10 +100,10 @@ module.exports.makeClient = ({ endpoint, region }) => ({
         const { data } = await makeSignedRequest({
           ...defaults,
           path: '/' + prefix + '/_search',
-          body: { 
+          body: JSON.stringify({ 
             version: true,
             ...params,
-          },
+          }),
         })
         
         const { total, hits } = data.hits
