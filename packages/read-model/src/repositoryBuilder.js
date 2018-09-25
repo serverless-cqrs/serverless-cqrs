@@ -74,13 +74,7 @@ module.exports.build = ({ adapter, reducer }) => {
         save: eventsByIds => {
 
           const reduced = Object.keys(eventsByIds).reduce((p, id) => {
-            const existing = p[id] || results.find(e => e.id === id) 
-            const [ first ] = eventsByIds[id] 
-
-            if (!existing || first.version !== 0) {
-              console.error('won\'t process', id)
-              return p
-            }
+            const existing = p[id] || results.find(e => e.id === id) || { version: 0 }
 
             return {
               ...p,
