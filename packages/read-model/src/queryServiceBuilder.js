@@ -1,7 +1,8 @@
 module.exports.build = ({ repository }) => ({
   getById: async ({ id }) => {
     const { state } = await repository.getById(id)
-    return { id, ...state }
+    if (state)
+      return { id, ...state }
   },
   getByIds: async ({ ids }) => {
     const { results } = await repository.getByIds(ids)
