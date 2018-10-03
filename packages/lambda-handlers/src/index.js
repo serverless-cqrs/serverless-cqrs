@@ -4,9 +4,12 @@ module.exports.buildCommands = commands => async (event, context, callback) => {
   if (!commands[type])
     return callback('not supported: ' + type)
 
-  const res = await commands[type](id, payload)
-
-  return callback(null, res)
+  try {
+    const res = await commands[type](id, payload)
+    callback(null, res)
+  } catch (e) {
+    callback(e)
+  }
 }
 
 module.exports.buildQueries = queries => async (event, context, callback) => {
@@ -14,18 +17,23 @@ module.exports.buildQueries = queries => async (event, context, callback) => {
   
   if (!queries[type])
     return callback('not supported: ' + type)
-
-  const res = await queries[type](payload)
-
-  return callback(null, res)
+  try {
+    const res = await queries[type](payload)
+    callback(null, res)
+  } catch (e) {
+    callback(e)
+  }
 }
 
 module.exports.buildRefresh = refresh => async (event, context, callback) => {
   const { entityName } = event
 
-  const res = await refresh({ entityName })
-
-  return callback(null, res)
+  try {
+    const res = await refresh({ entityName })
+    callback(null, res)
+  } catch (e) {
+    callback(e)
+  }
 }
 
 module.exports.buildDynamoStreamHandler = handler => async (event, context, callback) => {
