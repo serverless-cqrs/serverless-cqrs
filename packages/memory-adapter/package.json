@@ -1,0 +1,25 @@
+{
+  "name": "serverless-cqrs.memory-adapter",
+  "version": "0.0.1",
+  "description": "An in-memory repository adapter for serverless-cqrs",
+  "main": "index.js",
+  "scripts": {
+    "test": "tap __test__/*"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/serverless-cqrs/memory-adapter.git"
+  },
+  "keywords": [
+    "serverless",
+    "cqrs",
+    "es",
+    "eventsourcing"
+  ],
+  "author": "Yonah Forst",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/serverless-cqrs/memory-adapter/issues"
+  },
+  "homepage": "https://github.com/serverless-cqrs/memory-adapter#readme"
+}
