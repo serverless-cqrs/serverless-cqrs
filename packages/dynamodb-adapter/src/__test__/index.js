@@ -5,11 +5,11 @@ const AWS_SDK = require('aws-sdk')
 
 AWS.setSDKInstance(AWS_SDK);
 
-const { makeClient } = require('../index')
-const client = makeClient({ 
+const { build } = require('../index')
+const clientParams = { 
   tableName: 'fooTable', 
   indexName: 'fooIndex',
-})
+}
 
 test('loadEvents', async assert => {
   var sentParams
@@ -43,7 +43,7 @@ test('loadEvents', async assert => {
     },
   }
 
-  const res = await client.build({ entityName: 'foo' }).loadEvents('p123')
+  const res = await build({ entityName: 'foo' }, clientParams).loadEvents('p123')
 
   assert.deepEquals(sentParams, expectedParams, 'queries dynamodb for events')
   assert.deepEquals(res, events, 'returns parsed events')
@@ -105,7 +105,7 @@ test('listCommits', async assert => {
   })
 
 
-  const { listCommits } = client.build({ entityName: 'foo' })
+  const { listCommits } = build({ entityName: 'foo' }, clientParams)
 
   const results = await listCommits()
 
@@ -161,7 +161,7 @@ test('append', async assert => {
     ReturnValues: 'NONE'
   }
 
-  await client.build({ entityName: 'foo' }).append('p123', 3, events)
+  await build({ entityName: 'foo' }, clientParams).append('p123', 3, events)
 
   assert.match(sentParams, expectedParams, 'makes putItem request to dynamodb')
   
@@ -170,7 +170,7 @@ test('append', async assert => {
     callback(new Error('ConditionalCheckFailedException'))
   })
 
-  await client.build({ entityName: 'foo' }).append('p123', 3, events).catch(e => {
+  await build({ entityName: 'foo' }, clientParams).append('p123', 3, events).catch(e => {
     assert.equals(e.message('A commit already exists with the specified version'))
   })
 
