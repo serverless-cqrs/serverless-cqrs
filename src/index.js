@@ -1,4 +1,4 @@
 module.exports = {
-  readModel: require('./readModelBuilder'),
-  writeModel: require('./writeModelBuilder'),
+  readModelBuilder: require('./readModelBuilder'),
+  writeModelBuilder: require('./writeModelBuilder'),
 }
