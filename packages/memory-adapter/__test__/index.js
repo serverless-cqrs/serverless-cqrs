@@ -1,10 +1,10 @@
 const { test } = require('tap')
 
-const { makeClient } = require('../index')
+const { build } = require('../index')
 
 test('parseCommit', async assert => {
-  const client = makeClient().build({ entityName: 'foo' })
-  const res = await client.parseCommit({ bar: 'baz' })
+  const adapter = build({ entityName: 'foo' })
+  const res = await adapter.parseCommit({ bar: 'baz' })
 
   assert.deepEquals(res, { bar: 'baz' }, 'returns same event')
 })
@@ -20,10 +20,9 @@ test('loadEvents', async assert => {
   }
   const expected = [ 'd', 'e', 'f', 'g', 'h', 'i' ]
 
-  const client = makeClient({ eventStore })
-    .build({ entityName: 'foo' })
+  const adapter = build({ entityName: 'foo' }, { eventStore })
   
-  const res = await client.loadEvents('123', 1)
+  const res = await adapter.loadEvents('123', 1)
 
   assert.deepEquals(res, expected, 'returns events after given version')
 })
@@ -42,20 +41,18 @@ test('listCommits', async assert => {
     { entityId: '789', commitId: '2', events: [ 'c' ] },
     { entityId: '012', commitId: '3', events: [ 'd' ] },
   ]
-  const client = makeClient({ eventStore })
-    .build({ entityName: 'foo' })
+  const adapter = build({ entityName: 'foo' }, { eventStore })
   
-  const res = await client.listCommits({ commitId: '1' })
+  const res = await adapter.listCommits({ commitId: '1' })
 
   assert.deepEquals(res, expected, 'returns commits after given commitId')
 })
 
 test('append', async assert => {
   const eventStore = {}
-  const client = makeClient({ eventStore })
-    .build({ entityName: 'foo' })
+  const adapter = build({ entityName: 'foo' }, { eventStore })
 
-  await client.append('123', 0, [ 'a' ])
+  await adapter.append('123', 0, [ 'a' ])
   const expected1 = [{
     commitId: /\w/,
     committedAt: /\d/,
@@ -67,7 +64,7 @@ test('append', async assert => {
 
   assert.match(eventStore.foo, expected1, 'appends event to new entityName')
   
-  await client.append('456', 1, [ 'b' ])
+  await adapter.append('456', 1, [ 'b' ])
   
   const expected2 = [
     ...expected1,
@@ -85,10 +82,7 @@ test('append', async assert => {
 
 test('set', async assert => {
   const projectionStore = {}
-  const client = makeClient({ projectionStore })
-    .build({ entityName: 'foo' })
-
-  
+  const adapter = build({ entityName: 'foo' }, { projectionStore })
 
   const expected = {
     foo: {
@@ -100,7 +94,7 @@ test('set', async assert => {
     }
   }
 
-  await client.set('123', {
+  await adapter.set('123', {
     version: 0,
     state: 'foobar',
   })
@@ -125,11 +119,10 @@ test('get', async assert => {
     state: 'foobar',
   }
 
-  const client = makeClient({ projectionStore })
-    .build({ entityName: 'foo' })
+  const adapter = build({ entityName: 'foo' }, { projectionStore })
 
  
-  const res = await client.get('123')
+  const res = await adapter.get('123')
 
   assert.deepEquals(res, expected, 'returns exisiting projection from store')
 })
@@ -165,11 +158,9 @@ test('batchGet', async assert => {
     state: 'bazbar',
   }]
 
-  const client = makeClient({ projectionStore })
-    .build({ entityName: 'foo' })
+  const adapter = build({ entityName: 'foo' }, { projectionStore })
 
- 
-  const res = await client.batchGet([ '123', '789', '999' ])
+  const res = await adapter.batchGet([ '123', '789', '999' ])
 
   assert.deepEquals(res, expected, 'returns exisiting projections from store')
 })
@@ -204,11 +195,10 @@ test('batchWrite', async assert => {
       }
     }
   }
-  const client = makeClient({ projectionStore })
-    .build({ entityName: 'foo' })
+  const adapter = build({ entityName: 'foo' }, { projectionStore })
 
  
-  const res = await client.batchWrite({
+  const res = await adapter.batchWrite({
     '123':{
       version: 0,
       state: 'foobar',
@@ -268,11 +258,10 @@ test('search', async assert => {
     },
   }]
 
-  const client = makeClient({ projectionStore })
-    .build({ entityName: 'foo' })
+  const adapter = build({ entityName: 'foo' }, { projectionStore })
 
  
-  const res = await client.search({
+  const res = await adapter.search({
     foo: 'bar',
     baz: 'foo',
   })
