@@ -9,110 +9,108 @@ const parseResult = ({ _id, _version=0, _source }) => ({
   state: _source,
 })
 
-module.exports.makeClient = ({ endpoint, region }) => ({
-  build: ({ entityName }) => {
-    const prefix = pluralize(entityName) + '/' + entityName
-    const defaults = {
-      endpoint,
-      region,
-      service: 'es',
-      method: 'GET',
-    }
+module.exports.build = ({ entityName }, { endpoint, region }) => {
+  const prefix = pluralize(entityName) + '/' + entityName
+  const defaults = {
+    endpoint,
+    region,
+    service: 'es',
+    method: 'GET',
+  }
 
-    return {
-      set: async (id, { version, state }) => {
-        const { data } = await makeSignedRequest({
-          ...defaults,
-          method: state ? 'PUT' : 'DELETE',
-          path: '/' + prefix + '/' + encodeURIComponent(id) + '?version_type=external&version=' + version,
-          body: JSON.stringify(state),
-        })
+  return {
+    set: async (id, { version, state }) => {
+      const { data } = await makeSignedRequest({
+        ...defaults,
+        method: state ? 'PUT' : 'DELETE',
+        path: '/' + prefix + '/' + encodeURIComponent(id) + '?version_type=external&version=' + version,
+        body: JSON.stringify(state),
+      })
 
-        return data
-      },
-      get: async (id) => {
-        const { data } = await makeSignedRequest({
-          ...defaults,
-          path: '/' + prefix + '/' + encodeURIComponent(id),
-        }).catch(e => {
-          if (e.response.status === 404)
-            return e.response
-            
-          throw e
-        })
-        
-        return parseResult(data)
-      },
-      batchGet: async (ids) => {
-        const { data } = await makeSignedRequest({
-          ...defaults,
-          path: '/' + prefix + '/_mget',
-          body: JSON.stringify({ ids }),
-        })
-    
-        const found = data.docs.filter(r => r.found)
-        return found.map(parseResult)
-      },
-      batchWrite: async (obj) => {
-        const content = Object.keys(obj).reduce((p, id) => {
-          const { version, state } = obj[id]
-          if (!state)
-            return [ 
-              ...p, 
-              { 
-                delete: { 
-                  _id: id,
-                }, 
-              }
-            ]
-
-          return [
-            ...p,
+      return data
+    },
+    get: async (id) => {
+      const { data } = await makeSignedRequest({
+        ...defaults,
+        path: '/' + prefix + '/' + encodeURIComponent(id),
+      }).catch(e => {
+        if (e.response.status === 404)
+          return e.response
+          
+        throw e
+      })
+      
+      return parseResult(data)
+    },
+    batchGet: async (ids) => {
+      const { data } = await makeSignedRequest({
+        ...defaults,
+        path: '/' + prefix + '/_mget',
+        body: JSON.stringify({ ids }),
+      })
+  
+      const found = data.docs.filter(r => r.found)
+      return found.map(parseResult)
+    },
+    batchWrite: async (obj) => {
+      const content = Object.keys(obj).reduce((p, id) => {
+        const { version, state } = obj[id]
+        if (!state)
+          return [ 
+            ...p, 
             { 
-              index: { 
-                _id: id, 
-                _version: version, 
-                version_type: 'external',
-              }
-            },
-            state,      
+              delete: { 
+                _id: id,
+              }, 
+            }
           ]
-        }, [])
 
-        const { data } = await makeSignedRequest({
-          ...defaults,
-          method: 'POST',
-          path: '/' + prefix + '/_bulk',
-          body: NDJSON.stringify(content),
-        })
+        return [
+          ...p,
+          { 
+            index: { 
+              _id: id, 
+              _version: version, 
+              version_type: 'external',
+            }
+          },
+          state,      
+        ]
+      }, [])
 
-        return data.items.reduce((p, c) => {
-          const { _id, error } = c.index || c.delete
-          if (!error) return p
+      const { data } = await makeSignedRequest({
+        ...defaults,
+        method: 'POST',
+        path: '/' + prefix + '/_bulk',
+        body: NDJSON.stringify(content),
+      })
 
-          return {
-            ...p,
-            [ _id ]: error
-          }
-        }, {})
-      },
-      search: async (params) => {
-        const { data } = await makeSignedRequest({
-          ...defaults,
-          path: '/' + prefix + '/_search',
-          body: JSON.stringify({ 
-            version: true,
-            ...params,
-          }),
-        })
-        
-        const { total, hits } = data.hits
+      return data.items.reduce((p, c) => {
+        const { _id, error } = c.index || c.delete
+        if (!error) return p
 
         return {
-          total,
-          data: hits.map(parseResult)
+          ...p,
+          [ _id ]: error
         }
-      },
-    }
+      }, {})
+    },
+    search: async (params) => {
+      const { data } = await makeSignedRequest({
+        ...defaults,
+        path: '/' + prefix + '/_search',
+        body: JSON.stringify({ 
+          version: true,
+          ...params,
+        }),
+      })
+      
+      const { total, hits } = data.hits
+
+      return {
+        total,
+        data: hits.map(parseResult)
+      }
+    },
   }
-})
+}

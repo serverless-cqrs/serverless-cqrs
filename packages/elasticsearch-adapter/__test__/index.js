@@ -1,15 +1,16 @@
 const { test } = require('tap')
 const proxyquire = require('proxyquire')
 
+const clientParams = {
+	endpoint: 'https://foobar.com',
+	region: 'eu-west-1',
+}
+
 test('set', assert => {
-	const { makeClient } = proxyquire('../index', {
+	const { build } = proxyquire('../index', {
 		'./makeSignedRequest': data => Promise.resolve({ data }),
 	})
-	const client = makeClient({
-		endpoint: 'https://foobar.com',
-	  region: 'eu-west-1',
-	})
-	const storage = client.build({ entityName: 'foo' })
+	const storage = build({ entityName: 'foo' }, clientParams)
 	
 	const expected = {
 		endpoint: 'https://foobar.com',
@@ -17,9 +18,7 @@ test('set', assert => {
 	  service: 'es',
 	  method: 'PUT',
 	  path: '/foos/foo/123?version_type=external&version=2',
-	  body: {
-	  	foo: 'bar',
-	  }
+	  body: '{"foo":"bar"}'
 	}
 
 	const obj = {
@@ -32,18 +31,14 @@ test('set', assert => {
 })
 
 test('get', assert => {
-	const { makeClient } = proxyquire('../index', {
+	const { build } = proxyquire('../index', {
 		'./makeSignedRequest': _source => Promise.resolve({ 
 			data: {
 				_id: 1, _version: 2, _source 
 			},
 		}),
-	})	
-	const client = makeClient({
-		endpoint: 'https://foobar.com',
-	  region: 'eu-west-1',
 	})
-	const storage = client.build({ entityName: 'foo' })
+	const storage = build({ entityName: 'foo' }, clientParams)
 
 
 	const expected = {
@@ -63,10 +58,10 @@ test('get', assert => {
 })
 
 test('batchGet', assert => {
-	const { makeClient } = proxyquire('../index', {
+	const { build } = proxyquire('../index', {
 		'./makeSignedRequest': ({ body, path })  => Promise.resolve({
 			data: {
-				docs: body.ids.map(id => ({
+				docs: JSON.parse(body).ids.map(id => ({
 					found: true,
 					_id: id,
 					_version: 2,
@@ -78,11 +73,7 @@ test('batchGet', assert => {
 			}
 		}),
 	})
-	const client = makeClient({
-		endpoint: 'https://foobar.com',
-	  region: 'eu-west-1',
-	})
-	const storage = client.build({ entityName: 'foo' })
+	const storage = build({ entityName: 'foo' }, clientParams)
 
 	const expected = [{
 		id: '123',
@@ -106,7 +97,7 @@ test('batchGet', assert => {
 
 test('batchWrite', assert => {
 	let sentParams
-	const { makeClient } = proxyquire('../index', {
+	const { build } = proxyquire('../index', {
 		'./NDJSON': JSON,
 		'./makeSignedRequest': params => {
 			sentParams = params
@@ -117,11 +108,7 @@ test('batchWrite', assert => {
 			})
 		},
 	})
-	const client = makeClient({
-		endpoint: 'https://foobar.com',
-	  region: 'eu-west-1',
-	})
-	const storage = client.build({ entityName: 'foo' })
+	const storage = build({ entityName: 'foo' }, clientParams)
 
 	const params = {
 		'123': {
