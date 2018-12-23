@@ -53,7 +53,7 @@ module.exports.build = ({ adapter, reducer }) => {
       }
     },
     getById: async (id) => {
-      const { state, version } = await adapter.get(id)
+      const { state, version } = await adapter.get(id) || {}
 
       return {
         state,
