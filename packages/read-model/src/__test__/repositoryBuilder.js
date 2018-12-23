@@ -50,6 +50,20 @@ test('getMetadata', async assert => {
   }, 'saves the last commit and increments version')
 })
 
+test('getMetadata - none', async assert => {
+  const repo = repositoryBuilder.build({
+    adapter: {
+      get: () => Promise.resolve(),
+    },
+    reducer,
+  })
+
+  const res = await repo.getMetadata()
+  assert.deepEquals(res.version, 0, 'returns the default version')
+
+  assert.deepEquals(res.state, {}, 'returns the default state')
+})
+
 test('getById', async assert => {
   const res = await repo.getById('123')
   assert.deepEquals(res.version, 2, 'returns the version')

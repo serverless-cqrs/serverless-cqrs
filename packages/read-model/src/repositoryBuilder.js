@@ -39,7 +39,7 @@ module.exports.build = ({ adapter, reducer }) => {
     
   return {
     getMetadata: async () => {
-      const { state, version } = await adapter.get(META_DOCUMENT_ID)
+      const { state={}, version=0 } = await adapter.get(META_DOCUMENT_ID) || {}
 
       return {
         state,
