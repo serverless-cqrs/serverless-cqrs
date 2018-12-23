@@ -1,7 +1,6 @@
 The goal of this project is to create a simple and easy-to-understand framework for building CQRS/ES services and deploying them to a serverless infrastructure.
 
-https://medium.com/@yonah.forst/introducing-serverless-cqrs-24471045c08d
-https://medium.com/@yonah.forst/getting-started-with-serverless-cqrs-part-2-2ea4ac114439
+Here are some introductory blog posts: [part 1](https://medium.com/@yonah.forst/introducing-serverless-cqrs-24471045c08d), [part 2](https://medium.com/@yonah.forst/getting-started-with-serverless-cqrs-part-2-2ea4ac114439)
 
 The library is structured around the principles of Onion Architecture so that it’s parts are easily testable and can be swapped out to support a variety of data storage options. It comes bundled with support for DynamoDB as the event store and AWS Elasticsearch service as the read projection store.
 
