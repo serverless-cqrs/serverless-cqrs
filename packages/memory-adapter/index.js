@@ -62,9 +62,14 @@ module.exports.build = ({ entityName }, { eventStore={}, projectionStore={} }={}
       return {}
     },
     search: async (params) => {
-      return Object.values(projClient).filter(e => {
+      const data = Object.values(projClient).filter(e => {
         return Object.keys(params).every(key => e.state[key] == params[key])
       })
+
+      return {
+        data,
+        total: data.length,
+      }
     },
   }
 }
