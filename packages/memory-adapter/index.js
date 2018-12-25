@@ -13,7 +13,7 @@ module.exports.build = ({ entityName }, { eventStore={}, projectionStore={} }={}
       delete listeners[id]
     },
     parseCommit: c => c,
-    loadEvents: async (id, version=0) => {
+    loadEvents: async (id, version=-1) => {
       const res = eventClient.filter(e => e.id == id && e.version > version)
         .reduce((p, c) => [ ...p, ...c.events ], [])
       return res
