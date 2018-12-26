@@ -23,7 +23,6 @@
   },
   "homepage": "https://github.com/serverless-cqrs/elasticsearch-adapter#readme",
   "dependencies": {
-    "axios": "^0.18.0",
     "pluralize": "^7.0.0"
   }
 }
