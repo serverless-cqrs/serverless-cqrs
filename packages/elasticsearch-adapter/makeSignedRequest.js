@@ -16,6 +16,9 @@ module.exports = ({ endpoint, path, body, service, method, region }) => {
     req.headers['Content-Type'] = 'application/json';
     req.body = body
 
+		if (req.body)
+			req.headers["Content-Length"] = req.body.length
+
     let signer = new AWS.Signers.V4(req, service, true);
     signer.addAuthorization(AWS.config.credentials, AWS.util.date.getDate());
 
