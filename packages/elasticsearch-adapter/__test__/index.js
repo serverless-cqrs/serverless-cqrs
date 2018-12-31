@@ -3,19 +3,16 @@ const proxyquire = require('proxyquire')
 
 const clientParams = {
 	endpoint: 'https://foobar.com',
-	region: 'eu-west-1',
 }
 
 test('set', assert => {
 	const { build } = proxyquire('../index', {
-		'./makeSignedRequest': data => Promise.resolve({ data }),
+		'./makeSignedRequest': body => Promise.resolve({ body }),
 	})
 	const storage = build({ entityName: 'foo' }, clientParams)
 	
 	const expected = {
 		endpoint: 'https://foobar.com',
-	  region: 'eu-west-1',
-	  service: 'es',
 	  method: 'PUT',
 	  path: '/foos/foo/123?version_type=external&version=2',
 	  body: '{"foo":"bar"}'
@@ -33,9 +30,9 @@ test('set', assert => {
 test('get', assert => {
 	const { build } = proxyquire('../index', {
 		'./makeSignedRequest': _source => Promise.resolve({ 
-			data: {
+			body: JSON.stringify({
 				_id: 1, _version: 2, _source 
-			},
+			}),
 		}),
 	})
 	const storage = build({ entityName: 'foo' }, clientParams)
@@ -46,8 +43,6 @@ test('get', assert => {
 		version: 2,
 		state: {
 			endpoint: 'https://foobar.com',
-		  region: 'eu-west-1',
-		  service: 'es',
 		  method: 'GET',
 		  path: '/foos/foo/123',
 		}
@@ -60,7 +55,7 @@ test('get', assert => {
 test('batchGet', assert => {
 	const { build } = proxyquire('../index', {
 		'./makeSignedRequest': ({ body, path })  => Promise.resolve({
-			data: {
+			body: JSON.stringify({
 				docs: JSON.parse(body).ids.map(id => ({
 					found: true,
 					_id: id,
@@ -70,7 +65,7 @@ test('batchGet', assert => {
 						path,
 					}
 				}))
-			}
+			})
 		}),
 	})
 	const storage = build({ entityName: 'foo' }, clientParams)
@@ -102,9 +97,7 @@ test('batchWrite', assert => {
 		'./makeSignedRequest': params => {
 			sentParams = params
 			return Promise.resolve({ 
-				data: {
-					items: [] 
-				}
+				body: '{"items":[]}'
 			})
 		},
 	})
@@ -129,8 +122,6 @@ test('batchWrite', assert => {
 	
 	const expected = {
 		endpoint: 'https://foobar.com',
-	  region: 'eu-west-1',
-	  service: 'es',
 	  method: 'POST',
 	  path: '/foos/foo/_bulk',
 	  body: JSON.stringify([

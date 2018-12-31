@@ -9,46 +9,56 @@ const parseResult = ({ _id, _version=0, _source }) => ({
   state: _source,
 })
 
-module.exports.build = ({ entityName }, { endpoint, region }) => {
+const parseJson = text => {
+	try {
+		return JSON.parse(text)
+	} catch (e) {
+		return text
+	}
+}
+
+
+module.exports.build = ({ entityName }, { endpoint }) => {
   const prefix = pluralize(entityName) + '/' + entityName
+  
   const defaults = {
     endpoint,
-    region,
-    service: 'es',
     method: 'GET',
   }
 
   return {
     set: async (id, { version, state }) => {
-      const { data } = await makeSignedRequest({
+      const { body } = await makeSignedRequest({
         ...defaults,
         method: state ? 'PUT' : 'DELETE',
         path: '/' + prefix + '/' + encodeURIComponent(id) + '?version_type=external&version=' + version,
         body: JSON.stringify(state),
       })
 
-      return data
+      return parseJson(body)
     },
     get: async (id) => {
-      const { data } = await makeSignedRequest({
+      const { body } = await makeSignedRequest({
         ...defaults,
         path: '/' + prefix + '/' + encodeURIComponent(id),
       }).catch(e => {
-        if (e.response.status === 404)
-          return e.response
+        if (e.statusCode === 404)
+          return e
           
         throw e
       })
-      
+
+      const data = parseJson(body)
       return parseResult(data)
     },
     batchGet: async (ids) => {
-      const { data } = await makeSignedRequest({
+      const { body } = await makeSignedRequest({
         ...defaults,
         path: '/' + prefix + '/_mget',
         body: JSON.stringify({ ids }),
       })
   
+      const data = parseJson(body)
       const found = data.docs.filter(r => r.found)
       return found.map(parseResult)
     },
@@ -78,12 +88,14 @@ module.exports.build = ({ entityName }, { endpoint, region }) => {
         ]
       }, [])
 
-      const { data } = await makeSignedRequest({
+      const { body } = await makeSignedRequest({
         ...defaults,
         method: 'POST',
         path: '/' + prefix + '/_bulk',
         body: NDJSON.stringify(content),
       })
+
+      const data = parseJson(body)
 
       return data.items.reduce((p, c) => {
         const { _id, error } = c.index || c.delete
@@ -96,7 +108,7 @@ module.exports.build = ({ entityName }, { endpoint, region }) => {
       }, {})
     },
     search: async (params) => {
-      const { data } = await makeSignedRequest({
+      const { body } = await makeSignedRequest({
         ...defaults,
         path: '/' + prefix + '/_search',
         body: JSON.stringify({ 
@@ -104,7 +116,8 @@ module.exports.build = ({ entityName }, { endpoint, region }) => {
           ...params,
         }),
       })
-      
+
+      const data = parseJson(body)
       const { total, hits } = data.hits
 
       return {

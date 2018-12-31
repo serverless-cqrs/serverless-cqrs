@@ -1,47 +1,26 @@
 const AWS = require('aws-sdk');
+const aws4 = require('aws4');
+const got = require('got');
 
-const parseJson = text => {
-	try {
-		return JSON.parse(text)
-	} catch (e) {
-		return text
+const chain = new AWS.CredentialProviderChain()
+
+const awsClient = got.extend({
+	hooks: {
+		beforeRequest: [
+			async options => {
+				const credentials = await chain.resolvePromise()
+				aws4.sign(options, credentials)
+			}
+		]
 	}
-}
+})
 
-module.exports = ({ endpoint, path, body, service, method, region }) => {
-	const url = endpoint + path
-	let req = new AWS.HttpRequest(url, region);
-    req.method = method
-    req.headers.host = req.endpoint.host
-    req.headers['Content-Type'] = 'application/json';
-    req.body = body
-
-		if (req.body)
-			req.headers["Content-Length"] = req.body.length
-
-    let signer = new AWS.Signers.V4(req, service, true);
-    signer.addAuthorization(AWS.config.credentials, AWS.util.date.getDate());
-
-
-    var client = new AWS.HttpClient();
-    return new Promise((resolve, reject) => {
-			client.handleRequest(req, null, res => {
-				var body = ''
-				res.on('data', chunk => body += chunk)
-				res.on('end', () => {
-
-					
-					const response = {
-						body,
-						status: res.statusCode,
-						statusMessage: res.statusMessage,
-						data: parseJson(body),
-					}
-
-					res.statusCode >= 200 && res.statusCode < 300
-						? resolve(response)
-						: reject({ response })	
-				})
-			}, reject)
-    })
+module.exports = async ({ endpoint, path, body, method }) => {
+	return awsClient('https://' + endpoint + path, {
+		body,
+		method,
+		headers: {
+			'Content-Type': 'application/json',
+		}
+	})
 }
