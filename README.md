@@ -1,3 +1,4 @@
+## About
 `serverless-cqrs` is collection tools to help you get started with building a fully functioning backend based on the principles of [CQRS](https://docs.microsoft.com/en-us/azure/architecture/patterns/cqrs), [Event Sourcing](http://www.cqrs.nu/Faq/event-sourcing), [Domain Driven Design](https://medium.com/the-coding-matrix/ddd-101-the-5-minute-tour-7a3037cf53b8), [and Onion Architecture](https://www.codeguru.com/csharp/csharp/cs_misc/designtechniques/understanding-onion-architecture.html).
 
 The goal is twofold: 
