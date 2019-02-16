@@ -20,6 +20,7 @@ npm i --save serverless-cqrs.memory-adapter
 ### Usage
 To start, you need Actions and a Reducer. So let's write simple ones:
 ```js
+// actions.js
 const actions = {
   addTodo: (state, payload) => {
     if (!payload.title) throw new Error('titleMissing')
@@ -33,8 +34,9 @@ const actions = {
 }
 
 module.exports = actions
-
+```
 ```js
+// reducer.js
 const initialState = {
   todos: []
 }
@@ -64,6 +66,7 @@ When that event is run through the reducer, a new todo is appended to the list.
 
 Next, we build an adapter to help us persist the events.
 ```js
+// adapter.js
 const memoryAdapterBuilder = require('serverless-cqrs.memory-adapter')
 module.exports = memoryAdapterBuilder.build({ 
   entityName: 'todo'
@@ -73,6 +76,7 @@ module.exports = memoryAdapterBuilder.build({
 This adapter will let us persist events and read-model projections in memory.  
 Finally, we use these to build our read and write model.
 ```js
+// index.js
 const {
   writeModelBuilder,
   readModelBuilder,
