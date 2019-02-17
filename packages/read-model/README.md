@@ -6,7 +6,7 @@ The query service is used to query the cached projection state of an entity. You
 
 The event service is used to handle incoming events from a write model subscription, and use those events to update the cached projection state. This the **push** approach we spoke about in [Eventual Consistency](../advanced/eventual-consistency.md).
 
-The refresh service is used to manually load new events from the write model's datastore. This is the **pull** approach we spoke about in [Eventual Consistency](../advanced/eventual-consistency.md).
+The refresh service is used to manually load new events from the write model's datastore. This is the **pull** approach we spoke about in [Eventual Consistency](https://serverless-cqrs.gitbook.io/serverless-cqrs/advanced/eventual-consistency).
 
 ### Example
 
