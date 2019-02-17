@@ -1,6 +1,6 @@
 # dynamodb-adapter
 
-A library that implements the [Write Model](../advanced/repository/write-model.md) Adapter interface for storing events on dynamodb.
+A library that implements the [Write Model](https://serverless-cqrs.gitbook.io/serverless-cqrs/advanced/repository/write-model) Adapter interface for storing events on dynamodb.
 
 Here's an example of the table config in CloudFormation syntax:
 
@@ -53,7 +53,7 @@ builds a write model adapter
 
 #### Returns
 
-an object with [write model methods](../advanced/repository/write-model.md#methods)
+an object with [write model methods](https://serverless-cqrs.gitbook.io/serverless-cqrs/advanced/repository/write-model#methods)
 
 ## Example
 
