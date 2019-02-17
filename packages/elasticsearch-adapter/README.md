@@ -1,6 +1,6 @@
 # elasticsearch-adapter
 
-A library that implements the [Read Model](../advanced/repository/read-model.md) Adapter interface for storing projections on AWS ElasticSearch.
+A library that implements the [Read Model](https://serverless-cqrs.gitbook.io/serverless-cqrs/advanced/repository/read-model) Adapter interface for storing projections on AWS ElasticSearch.
 
 ## Methods
 
@@ -19,7 +19,7 @@ builds a read-model adapter
 
 #### Returns
 
-an object with [read model methods](../advanced/repository/read-model.md#methods)
+an object with [read model methods](https://serverless-cqrs.gitbook.io/serverless-cqrs/advanced/repository/read-model#methods)
 
 ## Example
 
