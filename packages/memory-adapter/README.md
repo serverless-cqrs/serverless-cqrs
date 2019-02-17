@@ -1,6 +1,6 @@
 # memory-adapter
 
-A library that implements the [Write Model](../advanced/repository/write-model.md) and [Read Model](../advanced/repository/read-model.md) Adapter interface for storing events and projections in memory. Useful for development and testing but not for production, obviously 😛.
+A library that implements the [Write Model](https://serverless-cqrs.gitbook.io/serverless-cqrs/advanced/repository/write-model) and [Read Model](https://serverless-cqrs.gitbook.io/serverless-cqrs/advanced/repository/read-model) Adapter interface for storing events and projections in memory. Useful for development and testing but not for production, obviously 😛.
 
 ## Methods
 
@@ -15,12 +15,12 @@ builds a read-model and write-model adapter
 | attribute | type | description |
 | :--- | :--- | :--- |
 | `entityName` | `string` | the name of the entity |
-| `eventStore` | `object` | \(optional\) an object where keys are `entityNames` and values are arrays of [commit](../advanced/repository/write-model.md#commit) objects |
-| `projectionStore` | `object` | \(optional\) an object where keys are entity names and values are [projections](../advanced/repository/read-model.md#projection) objects keyed by `id` |
+| `eventStore` | `object` | \(optional\) an object where keys are `entityNames` and values are arrays of [commit](https://serverless-cqrs.gitbook.io/serverless-cqrs/advanced/repository/write-model#commit) objects |
+| `projectionStore` | `object` | \(optional\) an object where keys are entity names and values are [projections](https://serverless-cqrs.gitbook.io/serverless-cqrs/advanced/repository/read-model#projection) objects keyed by `id` |
 
 #### Returns
 
-an object with [write model methods](../advanced/repository/write-model.md#methods) and [read model methods](../advanced/repository/read-model.md#methods)
+an object with [write model methods](https://serverless-cqrs.gitbook.io/serverless-cqrs/advanced/repository/write-model#methods) and [read model methods](https://serverless-cqrs.gitbook.io/serverless-cqrs/advanced/repository/read-model#methods)
 
 ## Example
 
