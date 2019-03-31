@@ -1,5 +1,3 @@
-const pluralize = require('pluralize')
-
 const makeSignedRequest = require('./makeSignedRequest')
 const NDJSON = require('./NDJSON')
 
@@ -22,50 +20,69 @@ module.exports.build = ({
   entityName 
 }, { 
   endpoint, 
-  metaDocumentId='__meta__' 
 }) => {
-  const prefix = pluralize(entityName) + '/' + entityName
-  
+  const basePath = '/entities/' + entityName
+  const metaPath = '/entities/__meta__/' + entityName
+
   const defaults = {
     endpoint,
     method: 'GET',
   }
 
-  const get = async (id) => {
-    const { body } = await makeSignedRequest({
-      ...defaults,
-      path: '/' + prefix + '/' + encodeURIComponent(id),
-    }).catch(e => {
-      if (e.statusCode === 404)
-        return e
-        
-      throw e
-    })
-
-    const data = parseJson(body)
-    return parseResult(data)
-  }
-
-  const set = async (id, { version, state }) => {
-    const { body } = await makeSignedRequest({
-      ...defaults,
-      method: state ? 'PUT' : 'DELETE',
-      path: '/' + prefix + '/' + encodeURIComponent(id) + '?version_type=external&version=' + version,
-      body: JSON.stringify(state),
-    })
-
-    return parseJson(body)
-  }
-
   return {
-    set,
-    get,
-    getMetadata: () => get(metaDocumentId),
-    setMetadata: ({ version, state }) => set(metaDocumentId, { version, state }),
+    set: async (id, { version, state }) => {
+      const { body } = await makeSignedRequest({
+        ...defaults,
+        method: state ? 'PUT' : 'DELETE',
+        path: basePath + '/' + encodeURIComponent(id) + '?version_type=external&version=' + version,
+        body: JSON.stringify(state),
+      })
+
+      return parseJson(body)
+    },
+    get: async (id) => {
+      const { body } = await makeSignedRequest({
+        ...defaults,
+        path: basePath + '/' + encodeURIComponent(id),
+      }).catch(e => {
+        if (e.statusCode === 404)
+          return e
+          
+        throw e
+      })
+
+      const data = parseJson(body)
+      return parseResult(data)
+    },
+
+    setMetadata: async ({ version, state }) => {
+      const { body } = await makeSignedRequest({
+        ...defaults,
+        method: state ? 'PUT' : 'DELETE',
+        path: metaPath + '?version_type=external&version=' + version,
+        body: JSON.stringify(state),
+      })
+
+      return parseJson(body)
+    },
+    getMetadata: async () => {
+      const { body } = await makeSignedRequest({
+        ...defaults,
+        path: metaPath,
+      }).catch(e => {
+        if (e.statusCode === 404)
+          return e
+          
+        throw e
+      })
+
+      const data = parseJson(body)
+      return parseResult(data)
+    },
     batchGet: async (ids) => {
       const { body } = await makeSignedRequest({
         ...defaults,
-        path: '/' + prefix + '/_mget',
+        path: basePath + '/_mget',
         body: JSON.stringify({ ids }),
       })
   
@@ -102,7 +119,7 @@ module.exports.build = ({
       const { body } = await makeSignedRequest({
         ...defaults,
         method: 'POST',
-        path: '/' + prefix + '/_bulk',
+        path: basePath + '/_bulk',
         body: NDJSON.stringify(content),
       })
 
@@ -121,7 +138,7 @@ module.exports.build = ({
     search: async (params) => {
       const { body } = await makeSignedRequest({
         ...defaults,
-        path: '/' + prefix + '/_search',
+        path: basePath + '/_search',
         body: JSON.stringify({ 
           version: true,
           ...params,
