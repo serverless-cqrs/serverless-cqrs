@@ -18,7 +18,12 @@ const parseJson = text => {
 }
 
 
-module.exports.build = ({ entityName }, { endpoint }) => {
+module.exports.build = ({ 
+  entityName 
+}, { 
+  endpoint, 
+  metaDocumentId='__meta__' 
+}) => {
   const prefix = pluralize(entityName) + '/' + entityName
   
   const defaults = {
@@ -26,31 +31,37 @@ module.exports.build = ({ entityName }, { endpoint }) => {
     method: 'GET',
   }
 
+  const get = async (id) => {
+    const { body } = await makeSignedRequest({
+      ...defaults,
+      path: '/' + prefix + '/' + encodeURIComponent(id),
+    }).catch(e => {
+      if (e.statusCode === 404)
+        return e
+        
+      throw e
+    })
+
+    const data = parseJson(body)
+    return parseResult(data)
+  }
+
+  const set = async (id, { version, state }) => {
+    const { body } = await makeSignedRequest({
+      ...defaults,
+      method: state ? 'PUT' : 'DELETE',
+      path: '/' + prefix + '/' + encodeURIComponent(id) + '?version_type=external&version=' + version,
+      body: JSON.stringify(state),
+    })
+
+    return parseJson(body)
+  }
+
   return {
-    set: async (id, { version, state }) => {
-      const { body } = await makeSignedRequest({
-        ...defaults,
-        method: state ? 'PUT' : 'DELETE',
-        path: '/' + prefix + '/' + encodeURIComponent(id) + '?version_type=external&version=' + version,
-        body: JSON.stringify(state),
-      })
-
-      return parseJson(body)
-    },
-    get: async (id) => {
-      const { body } = await makeSignedRequest({
-        ...defaults,
-        path: '/' + prefix + '/' + encodeURIComponent(id),
-      }).catch(e => {
-        if (e.statusCode === 404)
-          return e
-          
-        throw e
-      })
-
-      const data = parseJson(body)
-      return parseResult(data)
-    },
+    set,
+    get,
+    getMetadata: () => get(metaDocumentId),
+    setMetadata: ({ version, state }) => set(metaDocumentId, { version, state }),
     batchGet: async (ids) => {
       const { body } = await makeSignedRequest({
         ...defaults,

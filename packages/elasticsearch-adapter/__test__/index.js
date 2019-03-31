@@ -52,6 +52,54 @@ test('get', assert => {
 		.then(res => assert.deepEquals(res, expected, 'gets object'))
 })
 
+
+test('setMetadata', assert => {
+	const { build } = proxyquire('../index', {
+		'./makeSignedRequest': body => Promise.resolve({ body }),
+	})
+	const storage = build({ entityName: 'foo' }, clientParams)
+	
+	const expected = {
+		endpoint: 'https://foobar.com',
+	  method: 'PUT',
+	  path: '/foos/foo/__meta__?version_type=external&version=2',
+	  body: '{"foo":"bar"}'
+	}
+
+	const obj = {
+		version: '2',
+		state: { foo: 'bar'},
+	}
+
+	return storage.setMetadata(obj)
+		.then(res => assert.deepEquals(res, expected, 'sets metadata document'))
+})
+
+test('getMetadata', assert => {
+	const { build } = proxyquire('../index', {
+		'./makeSignedRequest': _source => Promise.resolve({ 
+			body: JSON.stringify({
+				_id: '__meta__', _version: 2, _source 
+			}),
+		}),
+	})
+	const storage = build({ entityName: 'foo' }, clientParams)
+
+
+	const expected = {
+		id: '__meta__',
+		version: 2,
+		state: {
+			endpoint: 'https://foobar.com',
+		  method: 'GET',
+		  path: '/foos/foo/__meta__',
+		}
+	}
+
+	return storage.getMetadata()
+		.then(res => assert.deepEquals(res, expected, 'gets metadata'))
+})
+
 test('batchGet', assert => {
 	const { build } = proxyquire('../index', {
 		'./makeSignedRequest': ({ body, path })  => Promise.resolve({
