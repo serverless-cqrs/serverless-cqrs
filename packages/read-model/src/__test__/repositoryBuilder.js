@@ -12,6 +12,16 @@ const adapter = {
     id,
     ...obj
   }),
+  getMetadata: () => Promise.resolve({
+    version: 2,
+    state: {
+      foo: 'bar'
+    }
+  }),
+  setMetadata: (obj) => Promise.resolve({
+    id: '__meta__',
+    ...obj
+  }),
   batchGet: (ids) => Promise.resolve([{
     id: '123',
     version: 2,
@@ -53,7 +63,7 @@ test('getMetadata', async assert => {
 test('getMetadata - none', async assert => {
   const repo = repositoryBuilder.build({
     adapter: {
-      get: () => Promise.resolve(),
+      getMetadata: () => Promise.resolve(),
     },
     reducer,
   })

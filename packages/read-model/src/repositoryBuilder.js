@@ -29,8 +29,6 @@
   
 */
 
-const META_DOCUMENT_ID = '__meta__'
-
 module.exports.build = ({ adapter, reducer }) => {
   const applyEvents = (events, { state, version=0 }) => ({
     version: version + events.length,
@@ -39,13 +37,13 @@ module.exports.build = ({ adapter, reducer }) => {
     
   return {
     getMetadata: async () => {
-      const { state={}, version=0 } = await adapter.get(META_DOCUMENT_ID) || {}
+      const { state={}, version=0 } = await adapter.getMetadata() || {}
 
       return {
         state,
         version,
         save: commits => {
-          return adapter.set(META_DOCUMENT_ID, {
+          return adapter.setMetadata({
             version: version + commits.length,
             state: commits[commits.length - 1],
           })
