@@ -12,10 +12,10 @@ test('parseCommit', async assert => {
 test('loadEvents', async assert => {
   const eventStore = {
     'foo': [
-      { entityId: '123', version: 0, events: [ 'a' ] },
-      { entityId: '123', version: 1, events: [ 'b', 'c' ]},
-      { entityId: '123', version: 3, events: [ 'd', 'e', 'f' ] },
-      { entityId: '123', version: 6, events: [ 'g', 'h', 'i' ] },
+      { id: '123', version: 0, events: [ 'a' ] },
+      { id: '123', version: 1, events: [ 'b', 'c' ]},
+      { id: '123', version: 3, events: [ 'd', 'e', 'f' ] },
+      { id: '123', version: 6, events: [ 'g', 'h', 'i' ] },
     ]
   }
   const expected = [ 'd', 'e', 'f', 'g', 'h', 'i' ]
@@ -30,16 +30,16 @@ test('loadEvents', async assert => {
 test('listCommits', async assert => {
   const eventStore = {
     'foo': [
-      { entityId: '123', commitId: '0', events: [ 'a' ] },
-      { entityId: '456', commitId: '1', events: [ 'b' ]},
-      { entityId: '789', commitId: '2', events: [ 'c' ] },
-      { entityId: '012', commitId: '3', events: [ 'd' ] },
+      { id: '123', commitId: '0', events: [ 'a' ] },
+      { id: '456', commitId: '1', events: [ 'b' ]},
+      { id: '789', commitId: '2', events: [ 'c' ] },
+      { id: '012', commitId: '3', events: [ 'd' ] },
     ]
   }
 
   const expected = [
-    { entityId: '789', commitId: '2', events: [ 'c' ] },
-    { entityId: '012', commitId: '3', events: [ 'd' ] },
+    { id: '789', commitId: '2', events: [ 'c' ] },
+    { id: '012', commitId: '3', events: [ 'd' ] },
   ]
   const adapter = build({ entityName: 'foo' }, { eventStore })
   
@@ -56,8 +56,8 @@ test('append', async assert => {
   const expected1 = [{
     commitId: /\w/,
     committedAt: /\d/,
-    entityId: '123',
-    entityName: 'foo',
+    id: '123',
+    entity: 'foo',
     version: 0,
     events: [ 'a' ],      
   }]
@@ -71,8 +71,8 @@ test('append', async assert => {
     {
       commitId: /\w/,
       committedAt: /\d/,
-      entityId: '456',
-      entityName: 'foo',
+      id: '456',
+      entity: 'foo',
       version: 1,
       events: [ 'b' ],    
     }  
@@ -126,6 +126,48 @@ test('get', async assert => {
 
   assert.deepEquals(res, expected, 'returns exisiting projection from store')
 })
+
+
+test('setMetadata', async assert => {
+  const metadataStore = {}
+  const adapter = build({ entityName: 'foo' }, { metadataStore })
+
+  const expected = {
+    foo: {
+      version: 0,
+      state: 'foobar',
+    }
+  }
+
+  await adapter.setMetadata({
+    version: 0,
+    state: 'foobar',
+  })
+
+  assert.deepEquals(metadataStore, expected, 'sets metadata in store')
+})
+
+test('getMetadata', async assert => {
+  const metadataStore = {
+    foo:{
+      version: 0,
+      state: 'foobar',
+    }
+  }
+
+  const expected = {
+    version: 0,
+    state: 'foobar',
+  }
+
+  const adapter = build({ entityName: 'foo' }, { metadataStore })
+
+ 
+  const res = await adapter.getMetadata()
+
+  assert.deepEquals(res, expected, 'returns exisiting metadata from store')
+})
+
 
 test('batchGet', async assert => {
   const projectionStore = {
@@ -242,21 +284,24 @@ test('search', async assert => {
     }
   }
 
-  const expected = [{
-    id: '123',
-    version: 0,
-    state: {
-      foo: 'bar',
-      baz: 'foo'
-    },
-  }, {
-    id: '456',
-    version: 1,
-    state: {
-      foo: 'bar',
-      baz: 'foo'
-    },
-  }]
+  const expected = {
+    data: [{
+      id: '123',
+      version: 0,
+      state: {
+        foo: 'bar',
+        baz: 'foo'
+      },
+    }, {
+      id: '456',
+      version: 1,
+      state: {
+        foo: 'bar',
+        baz: 'foo'
+      },
+    }],
+    total: 2
+  }
 
   const adapter = build({ entityName: 'foo' }, { projectionStore })
 
