@@ -14,7 +14,7 @@ test('set', assert => {
 	const expected = {
 		endpoint: 'https://foobar.com',
 	  method: 'PUT',
-	  path: '/entities/foo/123?version_type=external&version=2',
+	  path: '/foos/foo/123?version_type=external&version=2',
 	  body: '{"foo":"bar"}'
 	}
 
@@ -44,7 +44,7 @@ test('get', assert => {
 		state: {
 			endpoint: 'https://foobar.com',
 		  method: 'GET',
-		  path: '/entities/foo/123',
+		  path: '/foos/foo/123',
 		}
 	}
 
@@ -62,8 +62,15 @@ test('setMetadata', assert => {
 	const expected = {
 		endpoint: 'https://foobar.com',
 	  method: 'PUT',
-	  path: '/entities/__meta__/foo?version_type=external&version=2',
-	  body: '{"foo":"bar"}'
+	  path: '/foos/_mapping/foo',
+		body: JSON.stringify({
+			_meta: {
+				version: '2',
+				state: {
+					foo: 'bar',
+				}
+			}
+		}),
 	}
 
 	const obj = {
@@ -79,7 +86,18 @@ test('getMetadata', assert => {
 	const { build } = proxyquire('../index', {
 		'./makeSignedRequest': _source => Promise.resolve({ 
 			body: JSON.stringify({
-				_id: 'foo', _version: 2, _source 
+				foos: {
+					mappings: {
+						foo: {
+							_meta: {
+								version: 2,
+								state: {
+									foo: 'bar',
+								},
+							}
+						}
+					}
+				}
 			}),
 		}),
 	})
@@ -87,12 +105,9 @@ test('getMetadata', assert => {
 
 
 	const expected = {
-		id: 'foo',
 		version: 2,
 		state: {
-			endpoint: 'https://foobar.com',
-		  method: 'GET',
-		  path: '/entities/__meta__/foo',
+			foo: 'bar'
 		}
 	}
 
@@ -123,14 +138,14 @@ test('batchGet', assert => {
 		version: 2,
 		state: {
 			id: '123',
-			path: '/entities/foo/_mget',
+			path: '/foos/foo/_mget',
 		}, 
 	}, {
 		id: '456',
 		version: 2,
 		state: {
 			id: '456',
-			path: '/entities/foo/_mget',
+			path: '/foos/foo/_mget',
 		},
 	}]
 
@@ -171,7 +186,7 @@ test('batchWrite', assert => {
 	const expected = {
 		endpoint: 'https://foobar.com',
 	  method: 'POST',
-	  path: '/entities/foo/_bulk',
+	  path: '/foos/foo/_bulk',
 	  body: JSON.stringify([
 	  	{	index: { _id: '123', _version: 1, version_type: 'external' }},
 	  	{ foo: 'bar' },

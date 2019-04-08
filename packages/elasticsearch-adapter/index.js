@@ -1,3 +1,5 @@
+const pluralize = require('pluralize')
+
 const makeSignedRequest = require('./makeSignedRequest')
 const NDJSON = require('./NDJSON')
 
@@ -15,15 +17,16 @@ const parseJson = text => {
 	}
 }
 
+const buildPath = (...args) => '/' + args.join('/')
 
 module.exports.build = ({ 
   entityName 
 }, { 
   endpoint, 
 }) => {
-  const basePath = '/entities/' + entityName
-  const metaPath = '/entities/__meta__/' + entityName
-
+  const index = pluralize(entityName)
+  const type = entityName
+  
   const defaults = {
     endpoint,
     method: 'GET',
@@ -34,7 +37,11 @@ module.exports.build = ({
       const { body } = await makeSignedRequest({
         ...defaults,
         method: state ? 'PUT' : 'DELETE',
-        path: basePath + '/' + encodeURIComponent(id) + '?version_type=external&version=' + version,
+        path: buildPath(
+          index, 
+          type, 
+          encodeURIComponent(id) + '?version_type=external&version=' + version
+        ),
         body: JSON.stringify(state),
       })
 
@@ -43,7 +50,11 @@ module.exports.build = ({
     get: async (id) => {
       const { body } = await makeSignedRequest({
         ...defaults,
-        path: basePath + '/' + encodeURIComponent(id),
+        path: buildPath(
+          index, 
+          type, 
+          encodeURIComponent(id)
+        ),
       }).catch(e => {
         if (e.statusCode === 404)
           return e
@@ -59,8 +70,17 @@ module.exports.build = ({
       const { body } = await makeSignedRequest({
         ...defaults,
         method: state ? 'PUT' : 'DELETE',
-        path: metaPath + '?version_type=external&version=' + version,
-        body: JSON.stringify(state),
+        path:  buildPath(
+          index,
+          '_mapping',
+          type,
+        ),
+        body: JSON.stringify({
+          _meta: {
+            version,
+            state,
+          },
+        }),
       })
 
       return parseJson(body)
@@ -68,7 +88,11 @@ module.exports.build = ({
     getMetadata: async () => {
       const { body } = await makeSignedRequest({
         ...defaults,
-        path: metaPath,
+        path: buildPath(
+          index,
+          '_mapping',
+          type,
+        )
       }).catch(e => {
         if (e.statusCode === 404)
           return e
@@ -77,12 +101,16 @@ module.exports.build = ({
       })
 
       const data = parseJson(body)
-      return parseResult(data)
+      return data[index]['mappings'][type]['_meta']
     },
     batchGet: async (ids) => {
       const { body } = await makeSignedRequest({
         ...defaults,
-        path: basePath + '/_mget',
+        path: buildPath(
+          index,
+          type,
+          '_mget',
+        ),
         body: JSON.stringify({ ids }),
       })
   
@@ -119,7 +147,11 @@ module.exports.build = ({
       const { body } = await makeSignedRequest({
         ...defaults,
         method: 'POST',
-        path: basePath + '/_bulk',
+        path: buildPath(
+          index,
+          type,
+          '_bulk',
+        ),
         body: NDJSON.stringify(content),
       })
 
@@ -138,7 +170,11 @@ module.exports.build = ({
     search: async (params) => {
       const { body } = await makeSignedRequest({
         ...defaults,
-        path: basePath + '/_search',
+        path: buildPath(
+          index,
+          type,
+          '_search',
+        ),
         body: JSON.stringify({ 
           version: true,
           ...params,
