@@ -1,7 +1,9 @@
 
-module.exports.build = ({ entityName }, { eventStore={}, projectionStore={} }={}) => {
+module.exports.build = ({ entityName }, { eventStore={}, projectionStore={}, metadataStore={} }={}) => {
   const eventClient = eventStore[entityName] || (eventStore[entityName] = [])
   const projClient = projectionStore[entityName] || (projectionStore[entityName] = {})
+  const metadata = metadataStore[entityName] || (metadataStore[entityName] = {})
+
   const listeners = {}
   const notifyListeners = commit => Object.values(listeners).map(func => func(commit))
 
@@ -49,6 +51,18 @@ module.exports.build = ({ entityName }, { eventStore={}, projectionStore={} }={}
     get: async (id) => {
       return projClient[id]
     },
+
+    setMetadata: async ({ version, state }) => {
+      if (metadata.version >= version) throw 'versionAlreadyExists'
+      metadata.state = state
+      metadata.version = version
+
+      return state
+    },
+    getMetadata: async () => {
+      return metadata
+    },
+
     batchGet: async (ids) => {
       return ids.map(id => projClient[id]).filter(e => !!e)
     },
