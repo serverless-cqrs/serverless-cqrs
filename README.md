@@ -1,22 +1,105 @@
-The goal of this project is to create a simple and easy-to-understand framework for building CQRS/ES services and deploying them to a serverless infrastructure.
+## About
+`serverless-cqrs` is collection tools to help you get started with building a fully functioning backend based on the principles of [CQRS](https://docs.microsoft.com/en-us/azure/architecture/patterns/cqrs), [Event Sourcing](http://www.cqrs.nu/Faq/event-sourcing), [Domain Driven Design](https://medium.com/the-coding-matrix/ddd-101-the-5-minute-tour-7a3037cf53b8), [and Onion Architecture](https://www.codeguru.com/csharp/csharp/cs_misc/designtechniques/understanding-onion-architecture.html).
 
-Here are some introductory blog posts: [part 1](https://medium.com/@yonah.forst/introducing-serverless-cqrs-24471045c08d), [part 2](https://medium.com/@yonah.forst/getting-started-with-serverless-cqrs-part-2-2ea4ac114439)
+The goal is twofold: 
+- Write as little boilerplate code as possible.
+- Clean service boundaries so that parts can be easily tested and swapped out.
 
-The library is structured around the principles of Onion Architecture so that it’s parts are easily testable and can be swapped out to support a variety of data storage options. It comes bundled with support for DynamoDB as the event store and AWS Elasticsearch service as the read projection store.
+## Readme
+https://serverless-cqrs.gitbook.io/serverless-cqrs  
+https://medium.com/@yonah.forst/introducing-serverless-cqrs-24471045c08d  
+https://medium.com/@yonah.forst/getting-started-with-serverless-cqrs-part-2-2ea4ac114439  
 
-This project combines concepts from [CQRS](http://www.cqrs.nu/Faq/command-query-responsibility-segregation), [Event Sourcing](http://www.cqrs.nu/Faq/event-sourcing), [DDD](http://www.cqrs.nu/Faq/domain-driven-design), and [Onion Architecture](https://www.codeguru.com/csharp/csharp/cs_misc/designtechniques/understanding-onion-architecture.html). Much of the inspiration for structuring it this way came from [this blog post](https://medium.com/@domagojk/patterns-for-designing-flexible-architecture-in-node-js-cqrs-es-onion-7eb10bbefe17). Here are some definitions of terms used throughout the project (if I’m using the wrong term for any of these, please let me know :)
 
-- **Entities**: the objects you are working with. I.e a User or a Post
-- **Projection**: The state of an entity, derived from a stream of events
-- **Domain**: The core business logic of your application, described as a series of pure functions. They never mutate data and have zero dependencies. There are two types of domain functions:
-    - **Actions**: Given only the current state of an entity and some input, decide if an action should be allowed. If no, throw an error. If yes, return a new event, representing the completion of that action
-    - **Reducers**: Given only the current state and a new event, compute and return the new state.
-- **Repository**: A layer that knows how to read and write to some data storage. It implements a standard interface for retrieving existing events/projections and writing new ones. 
-- **Services**: These are the interfaces you call to work with your data. There are a few kinds of services:
-    - **Commands**: you call this service to perform actions on your data. It loads the existing state from the repo and passes it to the domain. If your action is approved, a new event is generated and saved to the repo. Commands have no return value.
-    - **Query**: Methods for retrieving the current state(s) of entities
-    - **Events**: Listens for new events as they are saved to the the datastore. As events arrive, update the stored projections.
-    - **Refresh**: Loads past events and applies them to projections (if not yet applied). Useful for rebuilding your projections when something changes
+## Quickstart 
+### Install
+```
+npm i --save serverless-cqrs
+npm i --save serverless-cqrs.memory-adapter
+```
+### Usage
+To start, you need Actions and a Reducer. So let's write simple ones:
+```js
+// actions.js
+const actions = {
+  addTodo: (state, payload) => {
+    if (!payload.title) throw new Error('titleMissing')
+    
+    return [{
+      type: 'TodoAdded',
+      title: payload.title,
+      at: Date.now(),
+    }]
+  }
+}
 
-Further reading:
-https://medium.com/@teivah/1-year-of-event-sourcing-and-cqrs-fb9033ccd1c6
+module.exports = actions
+```
+```js
+// reducer.js
+const initialState = {
+  todos: []
+}
+
+const reducer = (state, event) => {
+  switch (event.type) {
+    case 'TodoAdded':
+      return {
+        todos: [
+          ...state.todos,
+          { title: event.title },
+        ]
+      }
+      
+    default:
+      return state
+  }
+}
+
+module.exports = (events, state=initialState) => events.reduce(reducer, state)
+```
+
+Above we have a basic action and reducer. 
+
+The action, `addTodo`, does some basic validation to check the presence of a title and if it succeeds, returns a new event with the type `TodoAdded`. 
+When that event is run through the reducer, a new todo is appended to the list.
+
+Next, we build an adapter to help us persist the events.
+```js
+// adapter.js
+const memoryAdapterBuilder = require('serverless-cqrs.memory-adapter')
+module.exports = memoryAdapterBuilder.build({ 
+  entityName: 'todo'
+})
+```
+
+This adapter will let us persist events and read-model projections in memory.  
+Finally, we use these to build our read and write model.
+```js
+// index.js
+const {
+  writeModelBuilder,
+  readModelBuilder,
+} = require('serverless-cqrs')
+
+const actions = require('./actions')
+const reducer = require('./reducer')
+const adapter = require('./adapter')
+
+module.exports.writeModel = writeModelBuilder.build({
+  actions,
+  reducer,
+  adapter,
+})
+
+module.exports.readModel = readModelBuilder.build({
+  reducer,
+  adapter,
+  eventAdapter: adapter,
+})
+```
+
+That's it!
+
+### Try it live
+https://repl.it/@yonahforst/serverless-cqrs-quickstart
