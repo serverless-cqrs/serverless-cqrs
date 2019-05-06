@@ -25,5 +25,8 @@
   "dependencies": {
     "serverless-cqrs.read-model": "git+https://github.com/serverless-cqrs/read-model.git",
     "serverless-cqrs.write-model": "git+https://github.com/serverless-cqrs/write-model.git"
+  },
+  "devDependencies": {
+    "lerna": "^3.13.3"
   }
 }
