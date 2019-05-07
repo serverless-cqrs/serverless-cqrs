@@ -7,8 +7,8 @@ First, make sure you've run `npm i -g serverless` and added your [AWS credential
 Deploying for the first time can take 10-20 minutes since it needs to create the ElasticSearch instance. If there is an error, you may get `ROLLBACK_IN_PROGRESS` the next time you try to deploy. Give it a few minutes and then try again.
 
 ```text
-git clone git@github.com:serverless-cqrs/express-example.git
-cd express-example
+git clone git@github.com:serverless-cqrs/serverless-cqrs.git
+cd serverless-cqrs/examples/express
 npm i
 serverless deploy
 ```
