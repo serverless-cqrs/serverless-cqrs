@@ -6,8 +6,8 @@ Deploying for the first time can take 10-20 minutes since it needs to create the
 If there's an error, you may get `ROLLBACK_IN_PROGRESS` the next time you try to deploy.  
 Give it a few minutes and then try again.
 ```
-git clone git@github.com:serverless-cqrs/graphql-example.git
-cd graphql-example
+git clone git@github.com:serverless-cqrs/serverless-cqrs.git
+cd serverless-cqrs/examples/graphql
 npm i
 serverless deploy
 ```
