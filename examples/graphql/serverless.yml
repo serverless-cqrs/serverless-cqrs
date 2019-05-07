@@ -1,0 +1,98 @@
+service: serverless-cqrs-graphql-example
+
+## let's define some constants to use later in this file
+custom:
+  writeModelTableName: graphqlCommitsByEntityIdAndVersion
+  writeModelIndexName: indexByEntityNameAndCommitId
+  readModelDomainName: graphql-readmodel
+
+provider:
+  name: aws
+  runtime: nodejs8.10
+  ## make these values available in process.env
+  environment:
+    WRITE_MODEL_TABLENAME: ${self:custom.writeModelTableName}
+    WRITE_MODEL_INDEXNAME: ${self:custom.writeModelIndexName}
+    ELASTIC_READ_MODEL_ENDPOINT:
+      Fn::GetAtt:
+        - ReadModelProjections
+        - DomainEndpoint 
+
+  ## allow our lambda functions to access to following resources
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - "dynamodb:*"
+      Resource: "arn:aws:dynamodb:*:*:table/${self:custom.writeModelTableName}*"
+    - Effect: "Allow"
+      Action:
+        - "es:*"
+      Resource:
+        - "arn:aws:es:*:*:domain/${self:custom.readModelDomainName}/*"  
+    - Effect: "Allow"
+      Action:
+        - "es:ESHttpGet"
+      Resource:
+        - "*"   
+
+## Create an API Gateway and connect it to our handler function
+functions:    
+  playground:
+    handler: index.playground
+    events:
+      - http: GET /
+  graphql:
+    handler: index.server
+    events:
+      - http: POST /
+
+resources:
+  Resources:
+    
+    ## create the dynamodb table for storing events
+    EventStoreTable:
+      Type: 'AWS::DynamoDB::Table'
+      Properties:
+        TableName: ${self:custom.writeModelTableName}
+        AttributeDefinitions: 
+          - AttributeName: entityId
+            AttributeType: S
+          - AttributeName: version
+            AttributeType: N
+          - AttributeName: entityName
+            AttributeType: S
+          - AttributeName: commitId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: entityId
+            KeyType: HASH
+          - AttributeName: version
+            KeyType: RANGE
+        ProvisionedThroughput:
+          ReadCapacityUnits: 5
+          WriteCapacityUnits: 5
+        GlobalSecondaryIndexes:
+        - IndexName: ${self:custom.writeModelIndexName}
+          KeySchema:
+          - AttributeName: entityName
+            KeyType: HASH
+          - AttributeName: commitId
+            KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+          ProvisionedThroughput:
+            ReadCapacityUnits: 5
+            WriteCapacityUnits: 5
+
+    ## create an ElasticSearch instance for storing read model projections
+    ReadModelProjections:
+        Type: 'AWS::Elasticsearch::Domain'
+        Properties:
+          DomainName: ${self:custom.readModelDomainName}
+          ElasticsearchVersion: 6.2
+          EBSOptions:
+            EBSEnabled: true
+            VolumeSize: 10
+            VolumeType: gp2
+          ElasticsearchClusterConfig:
+            InstanceType: t2.small.elasticsearch

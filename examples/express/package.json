@@ -1,0 +1,26 @@
+{
+  "name": "serverless-cqrs.express-example",
+  "version": "0.0.1",
+  "description": "",
+  "main": "src/index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/serverless-cqrs/express-example"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/serverless-cqrs/express-example/issues"
+  },
+  "homepage": "https://github.com/serverless-cqrs/express-example#readme",
+  "dependencies": {
+    "express": "4.16.4",
+    "serverless-cqrs": "serverless-cqrs/serverless-cqrs",
+    "serverless-cqrs.dynamodb-adapter": "serverless-cqrs/dynamodb-adapter",
+    "serverless-cqrs.elasticsearch-adapter": "serverless-cqrs/elasticsearch-adapter",
+    "serverless-http": "^1.8.0"
+  }
+}
