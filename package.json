@@ -1,32 +1,7 @@
 {
-  "name": "serverless-cqrs",
-  "version": "0.0.4",
-  "description": "The main package for serverless-cqrs",
-  "main": "src/index.js",
-  "scripts": {
-    "test": "tap src/__test__/*.js"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/serverless-cqrs/serverless-cqrs.git"
-  },
-  "keywords": [
-    "serverless",
-    "cqrs",
-    "eventsourcing",
-    "es"
-  ],
-  "author": "Yonah Forst",
-  "license": "ISC",
-  "bugs": {
-    "url": "https://github.com/serverless-cqrs/serverless-cqrs/issues"
-  },
-  "homepage": "https://github.com/serverless-cqrs/serverless-cqrs#readme",
-  "dependencies": {
-    "serverless-cqrs.read-model": "git+https://github.com/serverless-cqrs/read-model.git",
-    "serverless-cqrs.write-model": "git+https://github.com/serverless-cqrs/write-model.git"
-  },
+  "name": "root",
+  "private": true,
   "devDependencies": {
-    "lerna": "^3.13.3"
+    "lerna": "^3.13.4"
   }
 }
