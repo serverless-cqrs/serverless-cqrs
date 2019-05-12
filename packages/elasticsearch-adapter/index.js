@@ -101,7 +101,7 @@ module.exports.build = ({
       })
 
       const data = parseJson(body)
-      return data[index]['mappings'][type]['_meta']
+      return data[index] && data[index]['mappings'][type]['_meta']
     },
     batchGet: async (ids) => {
       const { body } = await makeSignedRequest({
