@@ -19,7 +19,34 @@ const defaultOptions = {
   reducer,
 }
 
-test('handelEvent', async assert => {
+test('parseEvent', async assert => {
+  const readModelBuilder = proxyquire('../readModelBuilder', {
+    ...defaultStubs,
+    'serverless-cqrs.read-model': {
+      ...defaultStubs['serverless-cqrs.read-model'],
+      eventServiceBuilder: {
+        build: params => ({
+          parseEvent: () => params
+        })
+      }
+    },
+  })
+
+  const expected = {
+    eventAdapter: 'foobar',
+    repository: {
+      adapter: 'barfoo',
+      reducer,
+    }
+  }
+
+  const readModel = readModelBuilder.build(defaultOptions)
+  const res = readModel.parseEvent()
+
+  assert.deepEquals(res, expected)
+})
+
+test('handleEvent', async assert => {
   const readModelBuilder = proxyquire('../readModelBuilder', {
     ...defaultStubs,
     'serverless-cqrs.read-model': {

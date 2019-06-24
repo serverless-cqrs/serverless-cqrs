@@ -15,9 +15,30 @@ const eventAdapter = {
   loadEvents: id => Promise.resolve([ 'event1', 'event2', 'event3' ]),
 }
 
-const { handleEvent } = eventServiceBuilder.build({
+const { 
+  parseEvent,
+  handleEvent,
+} = eventServiceBuilder.build({
   repository,
   eventAdapter,
+})
+
+test('parseEvent', async assert => {
+  const event = {
+    id: '123',
+    version: 2,
+    events: [ 'event1', 'event2' ],
+  }
+  
+  const expected = {
+    id: '123',
+    version: 2,
+    events: [ 'event1', 'event2' ],
+  }
+
+  const res = await parseEvent(event)
+
+  assert.deepEquals(res, expected, 'sends the event to be parsed and returns the result')
 })
 
 test('handleEvents', async assert => {

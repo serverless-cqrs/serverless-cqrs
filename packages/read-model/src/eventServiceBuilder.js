@@ -8,6 +8,9 @@
 */
 
 module.exports.build = ({ repository, eventAdapter }) => ({
+  parseEvent: payload => {
+    return eventAdapter.parseCommit(payload)
+  },
   handleEvent: async payload => {
     const parsed = eventAdapter.parseCommit(payload)
     if (!parsed) return

@@ -51,6 +51,7 @@ module.exports.build = ({
   })
 
   return {
+    parseEvent: eventService.parseEvent,
     handleEvent: eventService.handleEvent,
     refresh: refreshService.refresh,
     getById: queryService.getById,
