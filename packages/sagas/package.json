@@ -1,0 +1,25 @@
+{
+  "name": "serverless-cqrs.sagas",
+  "version": "0.2.0-alpha.0",
+  "main": "src/index.js",
+  "scripts": {
+    "test": "tap src/__test__/*.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/serverless-cqrs/sagas.git"
+  },
+  "keywords": [
+    "serverless",
+    "cqrs",
+    "eventsourcing",
+    "es",
+    "sagas"
+  ],
+  "author": "Yonah Forst",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/serverless-cqrs/sagas/issues"
+  },
+  "homepage": "https://github.com/serverless-cqrs/sagas#readme"
+}
