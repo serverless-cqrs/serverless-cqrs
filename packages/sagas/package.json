@@ -1,6 +1,6 @@
 {
   "name": "serverless-cqrs.sagas",
-  "version": "0.2.0-alpha.0",
+  "version": "0.2.1-alpha.0",
   "main": "src/index.js",
   "scripts": {
     "test": "tap src/__test__/*.js"
