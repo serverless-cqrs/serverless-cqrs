@@ -5,15 +5,14 @@ module.exports.build = ({ entityName }, { tableName, indexName, ...awsOptions })
   const dynamodb = new AWS.DynamoDB(awsOptions)
 
   const parseCommit = i => {
-    if (i.entityName.S !== entityName) return
-
-    return {
-      id: i.entityId.S,
-      version: parseInt(i.version.N),
-      entity: i.entityName.S,
-      commitId: i.commitId.S,
-      events: JSON.parse(i.events.S),
-    }
+    if (i.entityName && i.entityName.S === entityName)
+      return {
+        id: i.entityId.S,
+        version: parseInt(i.version.N),
+        entity: i.entityName.S,
+        commitId: i.commitId.S,
+        events: JSON.parse(i.events.S),
+      }
   }
 
   return {
