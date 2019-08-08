@@ -11,6 +11,38 @@ const clientParams = {
   indexName: 'fooIndex',
 }
 
+test('parseCommit', async assert => {
+  const commit = {
+    entityId: {
+      S: 'e123'
+    },
+    entityName: {
+      S: 'foobar'
+    },
+    version: {
+      N: '1',
+    },
+    commitId: {
+      S: 'c123',
+    },
+    events: {
+      S: '["a", "b", "c"]',
+    },
+  }
+
+  const expected = {
+    id: 'e123',
+    entity: 'foobar',
+    version: 1,
+    commitId: 'c123',
+    events: ['a', 'b', 'c'],
+  }
+
+  assert.deepEquals(expected, build({ entityName: 'foobar' }).parseCommit(commit))
+  assert.deepEquals(expected, build({ entityName: '*' }).parseCommit(commit))
+  assert.equals(undefined, build({ entityName: 'barfoo' }).parseCommit(commit))
+})
+
 test('loadEvents', async assert => {
   var sentParams
 

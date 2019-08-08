@@ -1,11 +1,11 @@
 const AWS = require('aws-sdk')
 const cuid = require('cuid')
 
-module.exports.build = ({ entityName }, { tableName, indexName, ...awsOptions }) => {
+module.exports.build = ({ entityName }, { tableName, indexName, ...awsOptions }={}) => {
   const dynamodb = new AWS.DynamoDB(awsOptions)
 
   const parseCommit = i => {
-    if (i.entityName && (i.entityName == '*' || i.entityName.S === entityName))
+    if (entityName == '*' || i.entityName && i.entityName.S === entityName)
       return {
         id: i.entityId.S,
         version: parseInt(i.version.N),
