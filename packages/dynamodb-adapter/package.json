@@ -1,6 +1,6 @@
 {
   "name": "serverless-cqrs.dynamodb-adapter",
-  "version": "0.2.4-alpha.0",
+  "version": "0.2.5-alpha.0",
   "description": "A repository adapter for serverless-cqrs",
   "main": "src/index.js",
   "scripts": {
