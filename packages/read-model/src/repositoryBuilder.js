@@ -37,7 +37,10 @@ module.exports.build = ({ adapter, reducer }) => {
     
   return {
     getMetadata: async () => {
-      const { state={}, version=0 } = await adapter.getMetadata() || {}
+      const metadata = (adapter.getMetadata) 
+        ? await adapter.getMetadata()
+        : {};
+      const { state={}, version=0 } = metadata;
 
       return {
         state,
@@ -51,15 +54,22 @@ module.exports.build = ({ adapter, reducer }) => {
       }
     },
     getById: async (id) => {
-      const { state, version } = await adapter.get(id) || {}
+      const metadata = (adapter.get) 
+        ? await adapter.get(id)
+        : {};
+      const { state, version } = metadata;
 
-      return {
-        state,
-        version,
-        save: events => {
-          const reduced = applyEvents(events, { state, version })
-          return adapter.set(id, reduced)
-        },
+      if(adapter.set) {
+        return {
+          state,
+          version,
+          save: events => {
+            const reduced = applyEvents(events, { state, version })
+            return adapter.set(id, reduced)
+          },
+        }
+      } else {
+        return {};
       }
     },
     getByIds: async (ids) => {
@@ -85,7 +95,9 @@ module.exports.build = ({ adapter, reducer }) => {
       }     
     },
     search: params => {
-      return adapter.search(params)
+      return (adapter.search) 
+        ? adapter.search(params)
+        : {};
     }, 
   }
 }
