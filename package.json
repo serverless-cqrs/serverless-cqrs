@@ -1,6 +1,5 @@
 {
-  "name": "serverless-cqrs",
-  "version": "0.1.0",
+  "name": "root",
   "description": "serverless-cqrs",
   "private": true,
   "devDependencies": {
