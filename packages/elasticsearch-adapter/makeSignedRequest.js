@@ -16,7 +16,7 @@ const awsClient = got.extend({
 })
 
 module.exports = async ({ endpoint, path, body, method }) => {
-	return awsClient('https://' + endpoint + path, {
+	return awsClient(endpoint + path, {
 		body,
 		method,
 		headers: {
