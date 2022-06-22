@@ -24,7 +24,7 @@
   "homepage": "https://github.com/serverless-cqrs/elasticsearch-adapter#readme",
   "dependencies": {
     "aws4": "^1.8.0",
-    "got": "^9.5.0",
+    "got": "^11.8.5",
     "pluralize": "^7.0.0"
   }
 }
