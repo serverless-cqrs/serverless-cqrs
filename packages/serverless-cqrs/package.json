@@ -1,6 +1,6 @@
 {
   "name": "serverless-cqrs",
-  "version": "0.2.0-alpha.1",
+  "version": "0.2.1-alpha.0",
   "description": "The main package for serverless-cqrs",
   "main": "src/index.js",
   "scripts": {
@@ -25,5 +25,6 @@
   "dependencies": {
     "serverless-cqrs.read-model": "git+https://github.com/serverless-cqrs/read-model.git",
     "serverless-cqrs.write-model": "git+https://github.com/serverless-cqrs/write-model.git"
-  }
+  },
+  "gitHead": "40373a5a1d10dd82d4a236ffcdd79a8cf842e9c5"
 }

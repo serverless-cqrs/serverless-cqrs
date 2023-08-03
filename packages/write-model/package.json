@@ -1,6 +1,6 @@
 {
   "name": "serverless-cqrs.write-model",
-  "version": "0.2.0-alpha.1",
+  "version": "0.2.1-alpha.0",
   "description": "The serverelss-cqrs write model. A collection of builder functions for generating a write model.",
   "main": "src/index.js",
   "scripts": {
@@ -22,5 +22,6 @@
   "bugs": {
     "url": "https://github.com/serverless-cqrs/write-model/issues"
   },
-  "homepage": "https://github.com/serverless-cqrs/write-model#readme"
+  "homepage": "https://github.com/serverless-cqrs/write-model#readme",
+  "gitHead": "40373a5a1d10dd82d4a236ffcdd79a8cf842e9c5"
 }

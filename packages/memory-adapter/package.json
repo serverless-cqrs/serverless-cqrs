@@ -1,6 +1,6 @@
 {
   "name": "serverless-cqrs.memory-adapter",
-  "version": "0.2.0-alpha.1",
+  "version": "0.2.1-alpha.0",
   "description": "An in-memory repository adapter for serverless-cqrs",
   "main": "index.js",
   "scripts": {
@@ -21,5 +21,6 @@
   "bugs": {
     "url": "https://github.com/serverless-cqrs/memory-adapter/issues"
   },
-  "homepage": "https://github.com/serverless-cqrs/memory-adapter#readme"
+  "homepage": "https://github.com/serverless-cqrs/memory-adapter#readme",
+  "gitHead": "40373a5a1d10dd82d4a236ffcdd79a8cf842e9c5"
 }
