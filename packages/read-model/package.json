@@ -1,6 +1,6 @@
 {
   "name": "serverless-cqrs.read-model",
-  "version": "0.2.9-alpha.0",
+  "version": "0.2.10-alpha.0",
   "description": "The serverelss-cqrs read model. A collection of builder functions for generating a read model.",
   "main": "src/index.js",
   "scripts": {
@@ -23,5 +23,5 @@
     "url": "https://github.com/serverless-cqrs/read-model/issues"
   },
   "homepage": "https://github.com/serverless-cqrs/read-model#readme",
-  "gitHead": "40373a5a1d10dd82d4a236ffcdd79a8cf842e9c5"
+  "gitHead": "52c15b86e0fc0f8bcee1bae8b4d1d1f8dfcab6d6"
 }
