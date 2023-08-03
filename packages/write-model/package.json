@@ -1,6 +1,6 @@
 {
   "name": "serverless-cqrs.write-model",
-  "version": "0.2.2-alpha.0",
+  "version": "0.2.9-alpha.0",
   "description": "The serverelss-cqrs write model. A collection of builder functions for generating a write model.",
   "main": "src/index.js",
   "scripts": {

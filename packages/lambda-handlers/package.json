@@ -1,6 +1,6 @@
 {
   "name": "serverless-cqrs.lambda-handlers",
-  "version": "0.2.2-alpha.0",
+  "version": "0.2.9-alpha.0",
   "description": "Build serverless-cqrs handlers for AWS Lambda",
   "main": "src/index.js",
   "scripts": {
