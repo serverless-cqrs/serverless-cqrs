@@ -1,6 +1,6 @@
 {
   "name": "serverless-cqrs",
-  "version": "0.2.0-alpha.0",
+  "version": "0.2.0-alpha.1",
   "description": "The main package for serverless-cqrs",
   "main": "src/index.js",
   "scripts": {
