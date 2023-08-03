@@ -1,6 +1,6 @@
 {
   "name": "serverless-cqrs.elasticsearch-adapter",
-  "version": "0.2.1-alpha.0",
+  "version": "0.2.2-alpha.0",
   "description": "A repository adapter for serverless-cqrs",
   "main": "index.js",
   "scripts": {

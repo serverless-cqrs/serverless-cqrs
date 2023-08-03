@@ -1,6 +1,6 @@
 {
   "name": "serverless-cqrs.memory-adapter",
-  "version": "0.2.1-alpha.0",
+  "version": "0.2.2-alpha.0",
   "description": "An in-memory repository adapter for serverless-cqrs",
   "main": "index.js",
   "scripts": {
