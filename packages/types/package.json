@@ -1,0 +1,11 @@
+{
+  "name": "@serverless-cqrs/types",
+  "version": "0.2.10-alpha.0",
+  "description": "",
+  "main": "index.d.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC"
+}

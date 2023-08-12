@@ -1,5 +1,5 @@
 {
-  "name": "serverless-cqrs",
+  "name": "@serverless-cqrs/main",
   "version": "0.2.10-alpha.0",
   "description": "The main package for serverless-cqrs",
   "main": "src/index.js",
@@ -22,9 +22,10 @@
     "url": "https://github.com/serverless-cqrs/serverless-cqrs/issues"
   },
   "homepage": "https://github.com/serverless-cqrs/serverless-cqrs#readme",
+  "gitHead": "52c15b86e0fc0f8bcee1bae8b4d1d1f8dfcab6d6",
   "dependencies": {
-    "serverless-cqrs.read-model": "git+https://github.com/serverless-cqrs/read-model.git",
-    "serverless-cqrs.write-model": "git+https://github.com/serverless-cqrs/write-model.git"
-  },
-  "gitHead": "52c15b86e0fc0f8bcee1bae8b4d1d1f8dfcab6d6"
+    "@serverless-cqrs/read-model": "^0.2.10-alpha.0",
+    "@serverless-cqrs/types": "^0.2.10-alpha.0",
+    "@serverless-cqrs/write-model": "^0.2.10-alpha.0"
+  }
 }

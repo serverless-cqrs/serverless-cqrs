@@ -2,6 +2,9 @@
   "name": "root",
   "private": true,
   "devDependencies": {
-    "lerna": "^3.13.4"
-  }
+    "typescript": "^5.1.6"
+  },
+  "workspaces": [
+    "packages/*"
+  ]
 }
