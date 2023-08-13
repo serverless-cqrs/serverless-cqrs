@@ -1,24 +1,26 @@
 import { ReadModelRepository, QueryService } from "@serverless-cqrs/types";
 
-export function build<AggregateShape, EventShape>({
+export function build<ProjectionShape, EventShape>({
   repository,
 }: {
-  repository: ReadModelRepository<AggregateShape, EventShape>;
-}): QueryService<AggregateShape> {
+  repository: ReadModelRepository<ProjectionShape, EventShape>;
+}): QueryService<ProjectionShape> {
   return {
     getById: async ({ id }) => {
-      const { state } = await repository.getById(id);
-      if (state) return { id, ...state };
+      const result = await repository.getById(id);
+      if (result) return { id, ...result.state };
     },
     getByIds: async ({ ids }) => {
-      const { results } = await repository.getByIds(ids);
+      const results = await repository.getByIds(ids);
       return results.map((e) => ({ id: e.id, ...e.state }));
     },
     search: async (params) => {
       const { data, total } = await repository.search(params);
+      const results = data.map((e) => ({ id: e.id, ...e.state }));
+
       return {
         total,
-        results: data.map((e) => ({ id: e.id, ...e.state })),
+        results,
       };
     },
   };

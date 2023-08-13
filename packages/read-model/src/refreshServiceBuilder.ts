@@ -12,49 +12,45 @@
 
 import {
   EventStore,
-  Projection,
-  ProjectionsById,
-  EventsById,
   ReadModelRepository,
-  CommitsById,
   RefreshService,
 } from "@serverless-cqrs/types";
 
-function sanitizeCommits<AggregateShape, EventShape>(
-  groupedCommits: CommitsById<EventShape>,
-  projections: Projection<AggregateShape>[]
-) {
-  // we look at the version of the projection (which counts events used to dervie the current state) and compare it to the
-  // vesion of the the event (which counts all previous events). Those version numbers should match. If they don't, it means that we
-  // are either missing an event, or we already applied this one.
-  // if the projection has a HIGHER version number it means we already applied this commit, so we can safely ignore it.
-  // if the projection has a LOWER version number, it means that we're missing some commits and our store is inconsistent, so we throw.
+// function sanitizeCommits<AggregateShape, EventShape>(
+//   groupedCommits: CommitsById<EventShape>,
+//   projections: Projection<AggregateShape>[]
+// ) {
+//   // we look at the version of the projection (which counts events used to dervie the current state) and compare it to the
+//   // vesion of the the event (which counts all previous events). Those version numbers should match. If they don't, it means that we
+//   // are either missing an event, or we already applied this one.
+//   // if the projection has a HIGHER version number it means we already applied this commit, so we can safely ignore it.
+//   // if the projection has a LOWER version number, it means that we're missing some commits and our store is inconsistent, so we throw.
 
-  const projectionsById = projections.reduce(
-    (p, c) => ({
-      ...p,
-      [c.id]: c,
-    }),
-    {} as ProjectionsById<AggregateShape>
-  );
+//   const projectionsById = projections.reduce(
+//     (p, c) => ({
+//       ...p,
+//       [c.id]: c,
+//     }),
+//     {} as ProjectionsById<AggregateShape>
+//   );
 
-  return Object.keys(groupedCommits).reduce((pre, id) => {
-    const [commit] = groupedCommits[id]; // get the first commit
-    const record = projectionsById[id] || { version: 0 };
+//   return Object.keys(groupedCommits).reduce((pre, id) => {
+//     const [commit] = groupedCommits[id]; // get the first commit
+//     const record = projectionsById[id] || { version: 0 };
 
-    if (record.version > commit.version) return pre; // skip if we already applied this version
+//     if (record.version > commit.version) return pre; // skip if we already applied this version
 
-    if (record.version < commit.version) {
-      console.error(JSON.stringify({ record, commit }, null, 2));
-      throw "missingVersions"; // throw if we're missing a version
-    }
+//     if (record.version < commit.version) {
+//       console.error(JSON.stringify({ record, commit }, null, 2));
+//       throw "missingVersions"; // throw if we're missing a version
+//     }
 
-    return {
-      ...pre,
-      [id]: groupedCommits[id],
-    };
-  }, {} as CommitsById<EventShape>);
-}
+//     return {
+//       ...pre,
+//       [id]: groupedCommits[id],
+//     };
+//   }, {} as CommitsById<EventShape>);
+// }
 
 export function build<AggregateShape, EventShape>({
   repository,
@@ -74,43 +70,11 @@ export function build<AggregateShape, EventShape>({
           // if there are no more commits to process, return
           return;
 
-        // group commits by id, so we can load the projection records
-        const commitsById = commits.reduce((p, c) => {
-          if (!p[c.id]) p[c.id] = [];
-          p[c.id].push(c);
-          return p;
-        }, {} as CommitsById<EventShape>);
-
-        const ids = Object.keys(commitsById);
-
-        // load existing projections from repository
-        const projections = await repository.getByIds(ids);
-
-        // we need to make sure that we apply events to projections in order, and that we dont skip or double-apply any events
-        const sanitized = sanitizeCommits(commitsById, projections.results);
-
-        // extract the events and send them to the projections
-        const events = Object.keys(sanitized).reduce((p, c) => {
-          return {
-            ...p,
-            [c]: sanitized[c].reduce(
-              (p, c) => [...p, ...c.events],
-              [] as EventShape[]
-            ),
-          };
-        }, {} as EventsById<EventShape>);
-
-        const length = Object.keys(sanitized).length;
-        if (length > 0) await projections.save(events);
+        await repository.applyCommits(commits);
 
         await versionLock.save(commits);
 
-        console.log(
-          "processed commits:",
-          commits.length,
-          "updated records:",
-          length
-        );
+        console.log("processed commits:", commits.length);
       }
     },
   };

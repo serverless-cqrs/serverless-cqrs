@@ -1,4 +1,4 @@
-import { Commit, ID, Projection } from "../base";
+import { Commit, ID, SearchResults } from "../base";
 
 export interface EventService<EventShape> {
   handleEvent: (commit: Commit<EventShape>) => Promise<void>;
@@ -19,10 +19,12 @@ export interface QueryService<ProjectionShape> {
   }: {
     ids: ID[];
   }) => Promise<QueryServiceResult<ProjectionShape>[]>;
-  // search: (params: any) => Promise<{
-  //   results: Aggregate<AggregateShape>[];
-  //   total: number;
-  // }>;
+  search: (params: any) => Promise<QueryServiceSearchResults<ProjectionShape>>;
+}
+
+interface QueryServiceSearchResults<ProjectionShape> {
+  total: number;
+  results: QueryServiceResult<ProjectionShape>[];
 }
 
 interface RefreshService {

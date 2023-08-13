@@ -1,14 +1,14 @@
 const {
   repositoryBuilder,
   commandServiceBuilder,
-} = require('serverless-cqrs.write-model')
+} = require('@serverless-cqrs/write-model')
 
-module.exports.build = ({ 
-  actions, 
+module.exports.build = ({
+  actions,
   reducer,
   adapter,
 }) => {
-  
+
   // *** REPOSITORY ***
   // First lets use the adapter and the reducer to create a Repository. 
   // This is the layer that can return the current state of an entity
@@ -17,7 +17,7 @@ module.exports.build = ({
     adapter,
     reducer,
   })
-  
+
   // *** SERVICES ***
   // let's initialize the command service. 
   // Commands are the mechanism through which external applications

@@ -35,6 +35,7 @@ import {
   ReadModelRepository,
   Projection,
   ID,
+  VersionLock,
 } from "@serverless-cqrs/types";
 
 export function build<ProjectionShape, EventShape>({
@@ -56,13 +57,13 @@ export function build<ProjectionShape, EventShape>({
   return {
     getVersionLock: async () => {
       const { lastCommitId = "", version = 0 } =
-        await projectionStore.getVersionLock();
+        (await projectionStore.getVersionLock()) || ({} as VersionLock);
 
       return {
         lastCommitId,
         version,
-        save: (commits) => {
-          projectionStore.setVersionLock({
+        save: async (commits) => {
+          await projectionStore.setVersionLock({
             version: version + commits.length,
             lastCommitId: commits[commits.length - 1].commitId,
           });
@@ -76,41 +77,54 @@ export function build<ProjectionShape, EventShape>({
       return ids.length !== 0 ? await projectionStore.batchGet(ids) : [];
     },
 
-    applyCommit: async ({ id, version, events }) => {
-      const projection = (await projectionStore.get(id)) || {
-        id,
-        state: null,
-        version: 0,
-      };
+    applyEvents: async (id, events, version) => {
+      const projection =
+        (await projectionStore.get(id)) ||
+        ({
+          id,
+          state: null,
+          version: 0,
+        } as Projection<ProjectionShape>);
 
-      if (projection.version !== version) throw new Error("versionMismatch");
+      // version is a count of events
+      // for a projection, it's the number of events used to derive the current state
+      // for an event commit, it's the number of preceding events
+      // therefore, when receiving a new event commit, it's version should always match the
+      // version of our projection before applying these events
+      // if it doesn't, that means we've missed an event and need to fetch the missing ones
+
+      // if the commit version is higher than the projection version it means that there are events missing
+      if (projection.version < version) throw new Error("versionMismatch");
+      // if the projection version is higher it means this events have already been applied, so skip
+      if (projection.version > version) return;
 
       const reduced = applyEvents(events, projection);
       return projectionStore.set(reduced);
     },
     applyCommits: async (commits) => {
       const projections = {} as { [index: ID]: Projection<ProjectionShape> };
-
-      for (const commit of commits) {
-        const projection = projections[commit.id] ||
-          (await projectionStore.get(commit.id)) || {
-            id: commit.id,
+      console.log(commits);
+      for (const { id, version, events } of commits) {
+        const projection = projections[id] ||
+          (await projectionStore.get(id)) || {
+            id: id,
             state: null,
             version: 0,
           };
 
-        if (projection.version !== commit.version)
-          throw new Error("versionMismatch");
+        // if the commit version is higher than the projection version it means that there are events missing
+        if (projection.version < version) throw new Error("versionMismatch");
+        // if the projection version is higher it means this events have already been applied, so skip
+        if (projection.version > version) continue;
 
-        const newProjection = applyEvents(commit.events, projection);
-
-        projections[commit.id] = newProjection;
+        const newProjection = applyEvents(events, projection);
+        projections[id] = newProjection;
       }
 
       await projectionStore.batchWrite(projections);
     },
-    // search: (params) => {
-    //   return projectionStore.search(params);
-    // },
+    search: (params) => {
+      return projectionStore.search(params);
+    },
   };
 }

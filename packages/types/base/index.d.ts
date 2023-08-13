@@ -28,15 +28,7 @@ export interface Projection<ProjectionShape> {
   state: ProjectionShape;
   version: number;
 }
-
-interface CommitsById<EventShape> {
-  [index: ID]: Commit<EventShape>[];
-}
-
-interface EventsById<EventShape> {
-  [index: ID]: EventShape[];
-}
-
-interface ProjectionsById<ProjectionShape> {
-  [index: ID]: Projection<ProjectionShape>;
+export interface SearchResults<ProjectionShape> {
+  data: Projection<ProjectionShape>[];
+  total: number;
 }

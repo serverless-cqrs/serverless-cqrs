@@ -9,7 +9,6 @@ import {
   ProjectionStore,
   EventStore,
   Reducer,
-  SearchResults,
   RefreshService,
   EventService,
   QueryService,
@@ -22,10 +21,10 @@ interface ReadModel<AggregateShape, EventShape>
 
 export function build<AggregateShape, EventShape>({
   reducer, // *** DOMAIN *** reducer is the pure function that reduces an event stream into the current state of an entity.
-  adapter,
+  projectionStore,
   eventStore,
 }: {
-  adapter: ProjectionStore<AggregateShape>;
+  projectionStore: ProjectionStore<AggregateShape>;
   reducer: Reducer<AggregateShape, EventShape>;
   eventStore: EventStore<EventShape>;
 }): ReadModel<AggregateShape, EventShape> {
@@ -34,7 +33,7 @@ export function build<AggregateShape, EventShape>({
   // This is the layer that can return the current state of a projection
   // it can also take new events, and use them to update the projection's state.
   const repository = repositoryBuilder.build({
-    adapter,
+    projectionStore,
     reducer,
   });
 
@@ -51,7 +50,6 @@ export function build<AggregateShape, EventShape>({
   // the one we are expecting
   const eventService = eventServiceBuilder.build({
     repository,
-    eventStore,
   });
 
   // next let's initialize the refresh service.
@@ -70,14 +68,13 @@ export function build<AggregateShape, EventShape>({
   });
 
   return {
-    // ...eventService,
-    // ...refreshService,
-    // ...queryService,
-    parseEvent: eventService.parseEvent,
-    handleEvent: eventService.handleEvent,
-    refresh: refreshService.refresh,
-    getById: queryService.getById,
-    getByIds: queryService.getByIds,
-    search: queryService.search,
+    ...eventService,
+    ...refreshService,
+    ...queryService,
+    // handleEvent: eventService.handleEvent,
+    // refresh: refreshService.refresh,
+    // getById: queryService.getById,
+    // getByIds: queryService.getByIds,
+    // search: queryService.search,
   };
 }

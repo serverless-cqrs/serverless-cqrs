@@ -6,7 +6,6 @@ import {
   ProjectionStore,
   Projection,
   VersionLock,
-  ReadModelRepository,
 } from "@serverless-cqrs/types";
 
 interface MemoryAdapter<ProjectionShape, EventShape>
@@ -40,7 +39,7 @@ export function build<AggregateShape, EventShape>(
     eventStore = {},
     projectionStore = {},
     metadataStore = {},
-  }: ReadModelRepository<AggregateShape, EventShape> = {}
+  }: MemoryAdapterConfig<AggregateShape, EventShape> = {}
 ): MemoryAdapter<AggregateShape, EventShape> {
   if (!eventStore[entityName]) eventStore[entityName] = [];
   if (!projectionStore[entityName]) projectionStore[entityName] = {};
@@ -72,8 +71,8 @@ export function build<AggregateShape, EventShape>(
         .reduce((p, c) => [...p, ...c.events], [] as EventShape[]);
       return res;
     },
-    listCommits: async ({ commitId = "0" } = { commitId: "0" }) => {
-      const res = eventClient.filter((e) => e.commitId > commitId);
+    listCommits: async (sinceCommitId = "0") => {
+      const res = eventClient.filter((e) => e.commitId > sinceCommitId);
       return res;
     },
     append: async (id: ID, version: number, events: EventShape[]) => {
@@ -93,7 +92,7 @@ export function build<AggregateShape, EventShape>(
       eventClient.push(commit);
       notifyListeners(commit);
     },
-    set: async (id: ID, { version, state }) => {
+    set: async ({ id, version, state }) => {
       if (projClient[id]?.version >= version) throw "versionAlreadyExists";
 
       projClient[id] = { id, version, state };
@@ -122,13 +121,13 @@ export function build<AggregateShape, EventShape>(
         };
       });
     },
-    // search: async (filter) => {
-    //   const data = Object.values(projClient).filter(filter);
+    search: async (filter) => {
+      const data = Object.values(projClient).filter(filter);
 
-    //   return {
-    //     data,
-    //     total: data.length,
-    //   };
-    // },
+      return {
+        data,
+        total: data.length,
+      };
+    },
   };
 }

@@ -21,7 +21,7 @@
 const mapValues = (object, func) => {
   return Object.keys(object).reduce((p, c) => ({
     ...p,
-    [ c ]: func(object[c])
+    [c]: func(object[c])
   }), {})
 }
 
@@ -30,8 +30,8 @@ module.exports.build = ({ actions, repository }) => {
     return async (id, payload) => {
       const { state, save } = await repository.getById(id)
 
-      const events = action(state, payload)
-
+      let events = action(state, payload)
+      if (!Array.isArray(events)) events = [events]
       await save(events)
 
       return true
