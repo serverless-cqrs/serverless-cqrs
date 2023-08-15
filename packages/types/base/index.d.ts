@@ -20,8 +20,12 @@ export interface VersionLock {
 
 export type Reducer<StateShape, EventShape> = (
   events: EventShape[],
-  state: StateShape
+  state?: StateShape
 ) => StateShape;
+
+interface Actions {
+  [index: string]: (...args: any[]) => any;
+}
 
 export interface Projection<ProjectionShape> {
   id: ID;

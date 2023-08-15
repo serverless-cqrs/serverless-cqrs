@@ -1,4 +1,4 @@
-import { ID, VersionLock, Projection, Commit } from "../base";
+import { ID, VersionLock, Projection, Commit, Aggregate } from "../base";
 import { StorageSearchResults } from "../storage";
 
 export interface RepositoryVersionLock extends VersionLock {
@@ -11,8 +11,14 @@ export interface ReadModelRepository<ProjectionShape, EventShape> {
   getByIds: (ids: ID[]) => Promise<Projection<ProjectionShape>[]>;
   applyEvents: (id: ID, events: EventShape[], version: number) => Promise<void>;
   applyCommits: (commits: Commit<EventShape>[]) => Promise<void>;
-
   search: (params: any) => Promise<StorageSearchResults<ProjectionShape>>;
+}
+
+export interface WriteModelRepository<AggregateShape, EventShape> {
+  getById: (id: ID) => Promise<{
+    state: AggregateShape;
+    save: (events: EventShape[]) => Promise<void>;
+  }>;
 }
 
 // export interface RepositoryResult<ProjectionShape, EventShape> {

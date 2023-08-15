@@ -1,7 +1,7 @@
 import { Commit, ID, Projection, VersionLock } from "../base";
 
 export interface EventStore<EventShape> {
-  loadEvents: (id: ID, version: number) => Promise<EventShape[]>;
+  loadEvents: (id: ID, version?: number) => Promise<EventShape[]>;
   listCommits: (sinceCommitId?: string) => Promise<Commit<EventShape>[]>;
   append: (id: ID, version: number, events: EventShape[]) => Promise<void>;
 }
