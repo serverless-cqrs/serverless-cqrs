@@ -71,10 +71,5 @@ export function build<AggregateShape, EventShape>({
     ...eventService,
     ...refreshService,
     ...queryService,
-    // handleEvent: eventService.handleEvent,
-    // refresh: refreshService.refresh,
-    // getById: queryService.getById,
-    // getByIds: queryService.getByIds,
-    // search: queryService.search,
   };
 }
