@@ -22,7 +22,12 @@ import { ID, WriteModelRepository, Actions } from "@serverless-cqrs/types";
 type CommandHandlers<ActionsShape extends Actions> = {
   [Property in keyof ActionsShape]: (
     id: ID,
-    payload: Parameters<ActionsShape[Property]>[1]
+    ...args: ActionsShape[Property] extends (
+      state: any,
+      ...args: infer Args
+    ) => any
+      ? Args
+      : never
   ) => Promise<void>;
 };
 
@@ -41,9 +46,9 @@ export function build<
 
   for (const key in actions) {
     const action = actions[key];
-    obj[key] = async (id, payload, ...args) => {
+    obj[key] = async (id, ...args) => {
       const { state, save } = await repository.getById(id);
-      let events = action(state, payload, ...args);
+      let events = action(state, ...args);
       if (!Array.isArray(events)) events = [events];
       await save(events);
     };
