@@ -16,11 +16,10 @@ export function build<ProjectionShape, EventShape>({
     },
     search: async (params) => {
       const { data, total } = await repository.search(params);
-      const results = data.map((e) => ({ id: e.id, ...e.state }));
 
       return {
         total,
-        results,
+        data: data.map((e) => ({ id: e.id, ...e.state })),
       };
     },
   };
