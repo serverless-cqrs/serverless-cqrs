@@ -16,7 +16,7 @@ import {
 
 interface ReadModel<AggregateShape, EventShape>
   extends EventService<EventShape>,
-    RefreshService,
+    RefreshService<EventShape>,
     QueryService<AggregateShape> {}
 
 export function build<AggregateShape, EventShape>({

@@ -58,8 +58,11 @@ export function build<AggregateShape, EventShape>({
 }: {
   repository: ReadModelRepository<AggregateShape, EventShape>;
   eventStore: EventStore<EventShape>;
-}): RefreshService {
+}): RefreshService<EventShape> {
   return {
+    getAggregateEvents: async (aggregateId: string) => {
+      return eventStore.loadEvents(aggregateId);
+    },
     refresh: async () => {
       while (true) {
         // load new commits

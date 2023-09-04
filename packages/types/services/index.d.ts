@@ -24,9 +24,10 @@ export interface QueryService<ProjectionShape> {
 
 export interface QueryServiceSearchResults<ProjectionShape> {
   total: number;
-  results: QueryServiceResult<ProjectionShape>[];
+  data: QueryServiceResult<ProjectionShape>[];
 }
 
-export interface RefreshService {
+export interface RefreshService<EventShape> {
+  getAggregateEvents: (aggregateId: string) => Promise<EventShape[]>;
   refresh: () => Promise<void>;
 }
