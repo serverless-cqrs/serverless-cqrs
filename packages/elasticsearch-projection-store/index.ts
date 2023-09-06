@@ -73,12 +73,12 @@ export function build<AggregateShape>(
         ...defaults,
         path: buildPath(index, type, encodeURIComponent(id)),
       }).catch((e) => {
-        if (e.response?.statusCode === 404) return e;
+        if (e.response?.statusCode === 404) return e.response;
 
         throw e;
       });
 
-      const data = parseJson(body) || {};
+      const data = parseJson(body);
       return parseResult(data);
     },
 
