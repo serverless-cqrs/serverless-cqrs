@@ -1,1 +1,0 @@
-module.exports.stringify = array => array.reduce((p, c) => p + JSON.stringify(c) + '\n', '')

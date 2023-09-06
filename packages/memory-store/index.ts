@@ -67,7 +67,7 @@ export function build<AggregateShape, EventShape>(
     },
     loadEvents: async (id, version = -1) => {
       const res = eventClient
-        .filter((e) => e.id == id && e.version > version)
+        .filter((e) => e.entityId == id && e.version > version)
         .reduce((p, c) => [...p, ...c.events], [] as EventShape[]);
       return res;
     },
@@ -75,17 +75,17 @@ export function build<AggregateShape, EventShape>(
       const res = eventClient.filter((e) => e.commitId > sinceCommitId);
       return res;
     },
-    append: async (id: ID, version: number, events: EventShape[]) => {
+    append: async (entityId: ID, version: number, events: EventShape[]) => {
       const committedAt = Date.now();
       const commitId =
         committedAt.toString() + Math.random().toString(36).slice(2, 8);
 
       const commit: Commit<EventShape> = {
-        id,
+        entityId,
         events,
         commitId,
         committedAt,
-        entity: entityName,
+        entityName,
         version: parseInt(version.toString()),
       };
 

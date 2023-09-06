@@ -56,8 +56,8 @@ export function build<ProjectionShape, EventShape>({
 
   return {
     getVersionLock: async () => {
-      const { lastCommitId = "", version = 0 } =
-        (await projectionStore.getVersionLock()) || ({} as VersionLock);
+      const { lastCommitId, version = 0 } =
+        (await projectionStore.getVersionLock()) || {};
 
       return {
         lastCommitId,
@@ -103,11 +103,10 @@ export function build<ProjectionShape, EventShape>({
     },
     applyCommits: async (commits) => {
       const projections = {} as { [index: ID]: Projection<ProjectionShape> };
-      console.log(commits);
-      for (const { id, version, events } of commits) {
-        const projection = projections[id] ||
-          (await projectionStore.get(id)) || {
-            id: id,
+      for (const { entityId, version, events } of commits) {
+        const projection = projections[entityId] ||
+          (await projectionStore.get(entityId)) || {
+            id: entityId,
             state: null,
             version: 0,
           };
@@ -118,7 +117,7 @@ export function build<ProjectionShape, EventShape>({
         if (projection.version > version) continue;
 
         const newProjection = applyEvents(events, projection);
-        projections[id] = newProjection;
+        projections[entityId] = newProjection;
       }
 
       await projectionStore.batchWrite(projections);

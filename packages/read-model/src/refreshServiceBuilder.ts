@@ -60,6 +60,10 @@ export function build<AggregateShape, EventShape>({
   eventStore: EventStore<EventShape>;
 }): RefreshService<EventShape> {
   return {
+    applyEvents: async ({ entityId, events, version }) => {
+      await repository.applyEvents(entityId, events, version);
+    },
+
     getAggregateEvents: async (aggregateId: string) => {
       return eventStore.loadEvents(aggregateId);
     },

@@ -1,14 +1,10 @@
 {
-  "name": "serverless-cqrs.dynamodb-adapter",
+  "name": "@serverless-cqrs/dynamodb-event-store",
   "version": "0.2.10-alpha.0",
   "description": "A repository adapter for serverless-cqrs",
   "main": "src/index.js",
   "scripts": {
     "test": "tap src/__test__/*"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/serverless-cqrs/dynamodb-adapter.git"
   },
   "keywords": [
     "serverless",
@@ -18,15 +14,13 @@
   ],
   "author": "Yonah Forst",
   "license": "ISC",
-  "bugs": {
-    "url": "https://github.com/serverless-cqrs/dynamodb-adapter/issues"
-  },
-  "homepage": "https://github.com/serverless-cqrs/dynamodb-adapter#readme",
   "devDependencies": {
+    "@aws-sdk/client-dynamodb": "^3.405.0",
     "aws-sdk-mock": "^4.1.0",
     "tap": "^12.0.1"
   },
   "dependencies": {
+    "@aws-sdk/util-dynamodb": "^3.405.0",
     "cuid": "^2.1.4"
   },
   "gitHead": "52c15b86e0fc0f8bcee1bae8b4d1d1f8dfcab6d6"

@@ -5,17 +5,17 @@ export type Aggregate<AggregateShape> = {
 } & AggregateShape;
 
 export interface Commit<EventShape> {
-  id: ID;
+  entityId: ID;
   events: EventShape[];
   commitId: ID;
   committedAt: number;
-  entity: string;
+  entityName: string;
   version: number;
 }
 
 export interface VersionLock {
-  lastCommitId: string;
-  version: number;
+  lastCommitId?: string;
+  version?: number;
 }
 
 export type Reducer<StateShape, EventShape> = (
