@@ -29,7 +29,7 @@ const awsClient = got.extend({
 
         // Make sure the credentials are resolved
         const credentials = await provider();
-        console.log(credentials);
+
         const { url, headers, json } = options as Options;
         // Extract the Amazon trace id from the headers as it shouldn't be used for signing
         const { [XRAY_TRACE_HEADER]: amazonTraceId, ...signingHeaders } =
