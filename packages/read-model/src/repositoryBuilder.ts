@@ -35,7 +35,6 @@ import {
   ReadModelRepository,
   Projection,
   ID,
-  VersionLock,
 } from "@serverless-cqrs/types";
 
 export function build<ProjectionShape, EventShape>({
