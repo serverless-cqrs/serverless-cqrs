@@ -1,5 +1,6 @@
 import got from "got";
 import * as aws4 from "aws4";
+export { HTTPError } from "got";
 
 import { fromNodeProviderChain } from "@aws-sdk/credential-providers";
 

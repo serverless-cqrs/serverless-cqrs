@@ -1,5 +1,5 @@
 import { default as pluralize } from "pluralize";
-import makeSignedRequest from "./makeSignedRequest";
+import makeSignedRequest, { HTTPError } from "./makeSignedRequest";
 import {
   ProjectionSearchParams,
   ProjectionStore,
@@ -48,6 +48,8 @@ export function build<AggregateShape>(
   const sanitizedEntity = camelToSnakeCase(entityName);
   const index = pluralize(sanitizedEntity);
   const type = sanitizedEntity;
+
+  const _parseResult = parseResult<AggregateShape>;
 
   const defaults: {
     endpoint: string;
@@ -102,7 +104,9 @@ export function build<AggregateShape>(
         path: buildPath(
           index,
           type,
-          encodeURIComponent(id) + "?version_type=external&version=" + version
+          encodeURIComponent(id) +
+            "?refresh=wait_for&version_type=external&version=" +
+            version
         ),
         body: JSON.stringify(state),
       });
@@ -110,17 +114,22 @@ export function build<AggregateShape>(
       return parseJson(body);
     },
     get: async (id) => {
-      const { body } = await makeSignedRequest({
-        ...defaults,
-        path: buildPath(index, type, encodeURIComponent(id)),
-      }).catch((e) => {
-        if (e.response?.statusCode === 404) return e.response;
-
+      try {
+        const { body } = await makeSignedRequest({
+          ...defaults,
+          path: buildPath(index, type, encodeURIComponent(id)),
+        });
+        const data = parseJson(body);
+        return _parseResult(data);
+      } catch (e) {
+        if (e instanceof HTTPError && e.response.statusCode == 404)
+          return {
+            id,
+            version: 0,
+            state: undefined,
+          };
         throw e;
-      });
-
-      const data = parseJson(body);
-      return parseResult(data);
+      }
     },
 
     setVersionLock: async ({ version, lastCommitId }: VersionLock) => {
@@ -139,18 +148,17 @@ export function build<AggregateShape>(
       return parseJson(body);
     },
     getVersionLock: async () => {
-      const { body } = await makeSignedRequest({
-        ...defaults,
-        path: buildPath(index, "_mapping"),
-      }).catch((e) => {
-        if (e.response?.statusCode === 400) return e;
-
+      try {
+        const { body } = await makeSignedRequest({
+          ...defaults,
+          path: buildPath(index, "_mapping"),
+        });
+        const data = parseJson(body);
+        return data[index] && data[index]["mappings"]["_meta"];
+      } catch (e) {
+        if (e instanceof HTTPError && e.response.statusCode == 404) return;
         throw e;
-      });
-      if (!body) return;
-
-      const data = parseJson(body);
-      return data[index] && data[index]["mappings"]["_meta"];
+      }
     },
     batchGet: async (ids) => {
       const { body } = await makeSignedRequest({
@@ -162,7 +170,7 @@ export function build<AggregateShape>(
 
       const data = parseJson(body);
       const found = data.docs.filter((r: any) => r.found);
-      return found.map(parseResult);
+      return found.map(_parseResult);
     },
     batchWrite: async (obj) => {
       const content = Object.keys(obj).reduce((p, id) => {
@@ -195,7 +203,7 @@ export function build<AggregateShape>(
       const { body } = await makeSignedRequest({
         ...defaults,
         method: "POST",
-        path: buildPath(index, type, "_bulk"),
+        path: buildPath(index, type, "_bulk?refresh=wait_for"),
         body: NDJSON.stringify(content),
       });
 
@@ -213,24 +221,35 @@ export function build<AggregateShape>(
     },
     search: async (searchParams) => {
       const query = buildQueryFromSearchParams(searchParams);
+      try {
+        const { body } = await makeSignedRequest({
+          ...defaults,
+          method: "POST",
+          path: buildPath(index, type, "_search"),
+          body: JSON.stringify({
+            version: true,
+            ...query,
+          }),
+        });
 
-      const { body } = await makeSignedRequest({
-        ...defaults,
-        method: "POST",
-        path: buildPath(index, type, "_search"),
-        body: JSON.stringify({
-          version: true,
-          ...query,
-        }),
-      });
+        const data = parseJson(body);
 
-      const data = parseJson(body);
-      const { total, hits } = data.hits;
+        const { total, hits } = data.hits;
 
-      return {
-        total: total.value,
-        data: hits.map(parseResult),
-      };
+        return {
+          total: total.value,
+          data: hits.map(_parseResult),
+        };
+      } catch (e) {
+        console.log(e);
+        if (e instanceof HTTPError && e.response.statusCode == 404)
+          return {
+            total: 0,
+            data: [],
+          };
+
+        throw e;
+      }
     },
   };
 }
