@@ -73,13 +73,14 @@ export function build<AggregateShape>(
     }
 
     if (params.sort) {
-      const { field, order } = params.sort;
+      let { field, order } = params.sort;
+      if (field == "id") field = "_id";
       query.sort = [{ [field]: order }];
     }
 
     if (params.rawQuery) {
       query.query = params.rawQuery;
-    } else if (params.filter) {
+    } else if (params.filter && Object.keys(params.filter).length > 0) {
       const filter = params.filter as Record<string, any>;
 
       query.query = {
