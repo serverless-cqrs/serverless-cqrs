@@ -122,12 +122,7 @@ export function build<AggregateShape>(
         const data = parseJson(body);
         return _parseResult(data);
       } catch (e) {
-        if (e instanceof HTTPError && e.response.statusCode == 404)
-          return {
-            id,
-            version: 0,
-            state: undefined,
-          };
+        if (e instanceof HTTPError && e.response.statusCode == 404) return;
         throw e;
       }
     },

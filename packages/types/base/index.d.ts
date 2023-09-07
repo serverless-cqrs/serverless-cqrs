@@ -29,7 +29,7 @@ interface Actions {
 
 export interface Projection<ProjectionShape> {
   id: ID;
-  state: ProjectionShape | undefined;
+  state: ProjectionShape;
   version: number;
 }
 export interface SearchResults<ProjectionShape> {
