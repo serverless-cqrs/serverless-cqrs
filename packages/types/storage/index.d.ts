@@ -15,8 +15,40 @@ export interface ProjectionStore<ProjectionShape> {
   batchWrite: (obj: {
     [index: ID]: Omit<Projection<ProjectionShape>, "id">;
   }) => Promise<void>;
-  search: (params: any) => Promise<StorageSearchResults<ProjectionShape>>;
+  search: (
+    params: ProjectionSearchParams<ProjectionShape>
+  ) => Promise<StorageSearchResults<ProjectionShape>>;
 }
+
+interface BasicListParams {
+  pagination?: {
+    page: number;
+    perPage: number;
+  };
+  sort?: {
+    field: string;
+    order: "DESC" | "ASC";
+  };
+}
+
+type ProjectionSearchParams<ProjectionShape> =
+  | ({
+      filter?: Partial<ProjectionShape>;
+      rawQuery?: never;
+      rawSearch?: never;
+    } & BasicListParams)
+  | ({
+      filter: never;
+      rawQuery?: any;
+      rawSearch?: never;
+    } & BasicListParams)
+  | {
+      filter: never;
+      rawQuery?: never;
+      rawSearch?: any;
+      pagination: never;
+      sort: never;
+    };
 
 interface StorageSearchResults<ProjectionShape> {
   data: Projection<ProjectionShape>[];

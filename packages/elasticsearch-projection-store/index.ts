@@ -1,6 +1,10 @@
 import { default as pluralize } from "pluralize";
 import makeSignedRequest from "./makeSignedRequest";
-import { ProjectionStore, VersionLock } from "@serverless-cqrs/types";
+import {
+  ProjectionSearchParams,
+  ProjectionStore,
+  VersionLock,
+} from "@serverless-cqrs/types";
 const camelToSnakeCase = (str: string) =>
   str.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`);
 import * as NDJSON from "./NDJSON";
@@ -51,6 +55,43 @@ export function build<AggregateShape>(
   } = {
     endpoint,
     method: "GET",
+  };
+
+  const buildQueryFromSearchParams = (
+    params: ProjectionSearchParams<AggregateShape>
+  ) => {
+    if (params.rawSearch) return params.rawSearch;
+
+    const query: Record<string, any> = {};
+
+    if (params.pagination) {
+      const { page, perPage } = params.pagination;
+      query.from = (page - 1) * perPage;
+      query.size = perPage;
+    }
+
+    if (params.sort) {
+      const { field, order } = params.sort;
+      query.sort = [{ [field]: order }];
+    }
+
+    if (params.rawQuery) {
+      query.query = params.rawQuery;
+    } else if (params.filter) {
+      const filter = params.filter as Record<string, any>;
+
+      query.query = {
+        bool: {
+          must: Object.keys(filter).map((key) => ({
+            match: {
+              [key]: filter[key],
+            },
+          })),
+        },
+      };
+    }
+
+    return query;
   };
 
   return {
@@ -114,6 +155,7 @@ export function build<AggregateShape>(
     batchGet: async (ids) => {
       const { body } = await makeSignedRequest({
         ...defaults,
+        method: "POST",
         path: buildPath(index, type, "_mget"),
         body: JSON.stringify({ ids }),
       });
@@ -169,14 +211,16 @@ export function build<AggregateShape>(
         };
       }, {});
     },
-    search: async (params) => {
+    search: async (searchParams) => {
+      const query = buildQueryFromSearchParams(searchParams);
+
       const { body } = await makeSignedRequest({
         ...defaults,
         method: "POST",
         path: buildPath(index, type, "_search"),
         body: JSON.stringify({
           version: true,
-          ...params,
+          ...query,
         }),
       });
 
