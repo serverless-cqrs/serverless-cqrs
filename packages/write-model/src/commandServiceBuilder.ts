@@ -50,7 +50,7 @@ export function build<
     const action = actions[key];
     obj[key] = async (id, metadata, ...args) => {
       const { state, save } = await repository.getById(id);
-      let events = action(
+      let events = await action(
         state,
         {
           ...metadata,
