@@ -59,6 +59,8 @@ export function build<
         },
         ...args
       );
+      if (!events) return;
+
       if (!Array.isArray(events)) events = [events];
       await save(events);
     };
