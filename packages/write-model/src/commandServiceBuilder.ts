@@ -19,10 +19,16 @@
 
 import { ID, WriteModelRepository, Actions } from "@serverless-cqrs/types";
 
+type Optional<Type, keys extends keyof Type> = Omit<Type, keys> &
+  Partial<Pick<Type, keys>>;
+
 type CommandHandlers<ActionsShape extends Actions> = {
   [Property in keyof ActionsShape]: (
     id: ID,
-    metadata: Omit<Parameters<ActionsShape[Property]>[1], "at" | "aggregateId">,
+    metadata: Omit<
+      Optional<Parameters<ActionsShape[Property]>[1], "at">,
+      "aggregateId"
+    >,
     ...rest: ActionsShape[Property] extends (
       state: any,
       metadata: any,
@@ -53,8 +59,8 @@ export function build<
       let events = await action(
         state,
         {
-          ...metadata,
           at: Date.now(),
+          ...metadata,
           aggregateId: id,
         },
         ...args
