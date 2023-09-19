@@ -1,5 +1,5 @@
 import { DynamoDB, DynamoDBClientConfig } from "@aws-sdk/client-dynamodb";
-import { Commit, EventStore } from "@serverless-cqrs/types";
+import { Commit, EventStore, RepositoryError } from "@serverless-cqrs/types";
 import { default as cuid } from "cuid";
 
 export interface DynamoDBConfig extends DynamoDBClientConfig {
@@ -95,7 +95,10 @@ export function build<EventShape>(
         await dynamodb.putItem(params);
       } catch (err: any) {
         if (err.name === "ConditionalCheckFailedException") {
-          throw new Error("A commit already exists with the specified version");
+          throw new RepositoryError({
+            name: "versionExists",
+            message: "A commit already exists with the specified version",
+          });
         }
 
         throw err;
