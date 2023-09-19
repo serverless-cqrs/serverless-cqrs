@@ -129,28 +129,28 @@ export function build<AggregateShape>(
     },
 
     setVersionLock: async ({ version, lastCommitId }: VersionLock) => {
-      const { body } = await makeSignedRequest({
+      await makeSignedRequest({
         ...defaults,
         method: "PUT",
-        path: buildPath(index, "_mapping"),
-        body: JSON.stringify({
-          _meta: {
-            version,
-            lastCommitId,
-          },
-        }),
+        path: buildPath(
+          "version_locks",
+          "version_lock",
+          type + "?refresh=wait_for&version_type=external&version=" + version
+        ),
+        body: JSON.stringify({ lastCommitId }),
       });
-
-      return parseJson(body);
     },
     getVersionLock: async () => {
       try {
         const { body } = await makeSignedRequest({
           ...defaults,
-          path: buildPath(index, "_mapping"),
+          path: buildPath("version_locks", "version_lock", type),
         });
-        const data = parseJson(body);
-        return data[index] && data[index]["mappings"]["_meta"];
+        const { _source, _version } = parseJson(body);
+        return {
+          lastCommitId: _source.lastCommitId,
+          version: _version,
+        };
       } catch (e) {
         if (e instanceof HTTPError && e.response.statusCode == 404) return;
         throw e;
@@ -237,7 +237,6 @@ export function build<AggregateShape>(
           data: hits.map(_parseResult),
         };
       } catch (e) {
-        console.log(e);
         if (e instanceof HTTPError && e.response.statusCode == 404)
           return {
             total: 0,

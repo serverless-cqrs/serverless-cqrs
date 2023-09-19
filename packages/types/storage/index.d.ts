@@ -10,7 +10,7 @@ export interface ProjectionStore<ProjectionShape> {
   set: (projection: Projection<ProjectionShape>) => Promise<void>;
   get: (id: ID) => Promise<Projection<ProjectionShape> | undefined>;
   setVersionLock: (versionLock: VersionLock) => Promise<void>;
-  getVersionLock: () => Promise<VersionLock | null>;
+  getVersionLock: () => Promise<VersionLock | undefined>;
   batchGet: (ids: ID[]) => Promise<Projection<ProjectionShape>[]>;
   batchWrite: (obj: {
     [index: ID]: Omit<Projection<ProjectionShape>, "id">;
