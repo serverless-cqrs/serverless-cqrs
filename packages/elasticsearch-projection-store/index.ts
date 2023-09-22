@@ -1,4 +1,3 @@
-import { default as pluralize } from "pluralize";
 import makeSignedRequest, { HTTPError } from "./makeSignedRequest";
 import {
   ProjectionSearchParams,
@@ -45,9 +44,7 @@ export function build<AggregateShape>(
   { entityName }: BuildParams,
   { endpoint }: ElasticSearchConfig
 ): ProjectionStore<AggregateShape> {
-  const sanitizedEntity = camelToSnakeCase(entityName);
-  const index = pluralize(sanitizedEntity);
-  const type = sanitizedEntity;
+  const index = camelToSnakeCase(entityName);
 
   const _parseResult = parseResult<AggregateShape>;
 
@@ -104,7 +101,7 @@ export function build<AggregateShape>(
         method: state ? "PUT" : "DELETE",
         path: buildPath(
           index,
-          type,
+          "_doc",
           encodeURIComponent(id) +
             "?refresh=wait_for&version_type=external&version=" +
             version
@@ -118,7 +115,7 @@ export function build<AggregateShape>(
       try {
         const { body } = await makeSignedRequest({
           ...defaults,
-          path: buildPath(index, type, encodeURIComponent(id)),
+          path: buildPath(index, "_doc", encodeURIComponent(id)),
         });
         const data = parseJson(body);
         return _parseResult(data);
@@ -133,9 +130,9 @@ export function build<AggregateShape>(
         ...defaults,
         method: "PUT",
         path: buildPath(
-          "version_locks",
           "version_lock",
-          type + "?refresh=wait_for&version_type=external&version=" + version
+          "_doc",
+          index + "?refresh=wait_for&version_type=external&version=" + version
         ),
         body: JSON.stringify({ lastCommitId }),
       });
@@ -144,7 +141,7 @@ export function build<AggregateShape>(
       try {
         const { body } = await makeSignedRequest({
           ...defaults,
-          path: buildPath("version_locks", "version_lock", type),
+          path: buildPath("version_lock", "_doc", index),
         });
         const { _source, _version } = parseJson(body);
         return {
@@ -160,7 +157,7 @@ export function build<AggregateShape>(
       const { body } = await makeSignedRequest({
         ...defaults,
         method: "POST",
-        path: buildPath(index, type, "_mget"),
+        path: buildPath(index, "_mget"),
         body: JSON.stringify({ ids }),
       });
 
@@ -199,7 +196,7 @@ export function build<AggregateShape>(
       const { body } = await makeSignedRequest({
         ...defaults,
         method: "POST",
-        path: buildPath(index, type, "_bulk?refresh=wait_for"),
+        path: buildPath(index, "_bulk?refresh=wait_for"),
         body: NDJSON.stringify(content),
       });
 
@@ -221,7 +218,7 @@ export function build<AggregateShape>(
         const { body } = await makeSignedRequest({
           ...defaults,
           method: "POST",
-          path: buildPath(index, type, "_search"),
+          path: buildPath(index, "_search"),
           body: JSON.stringify({
             version: true,
             ...query,
