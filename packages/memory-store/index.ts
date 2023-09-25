@@ -15,6 +15,9 @@ interface MemoryAdapter<ProjectionShape, EventShape>
   removeListener: (id: ID) => void;
 }
 
+const matches = (params: Record<string, any>, obj: Record<string, any>) =>
+  Object.keys(params).every((k) => obj[k] == params[k]);
+
 export interface MemoryAdapterConfig<AggregateShape, EventShape> {
   eventStore?: {
     [index: string]: Commit<EventShape>[];
@@ -24,7 +27,7 @@ export interface MemoryAdapterConfig<AggregateShape, EventShape> {
       [index: ID]: Projection<AggregateShape>;
     };
   };
-  metadataStore?: {
+  versionLockStore?: {
     [index: string]: VersionLock;
   };
 }
@@ -38,20 +41,20 @@ export function build<AggregateShape, EventShape>(
   {
     eventStore = {},
     projectionStore = {},
-    metadataStore = {},
+    versionLockStore = {},
   }: MemoryAdapterConfig<AggregateShape, EventShape> = {}
 ): MemoryAdapter<AggregateShape, EventShape> {
   if (!eventStore[entityName]) eventStore[entityName] = [];
   if (!projectionStore[entityName]) projectionStore[entityName] = {};
-  if (!metadataStore[entityName])
-    metadataStore[entityName] = {
+  if (!versionLockStore[entityName])
+    versionLockStore[entityName] = {
       lastCommitId: "",
       version: -1,
     };
 
   const eventClient = eventStore[entityName];
   const projClient = projectionStore[entityName];
-  const versionLock = metadataStore[entityName];
+  const versionLock = versionLockStore[entityName];
 
   const listeners = {} as { [index: string]: Function };
 
@@ -102,7 +105,7 @@ export function build<AggregateShape, EventShape>(
     },
 
     setVersionLock: async ({ version, lastCommitId }) => {
-      if (versionLock.version >= version) throw "versionAlreadyExists";
+      if (versionLock.version! >= version!) throw "versionAlreadyExists";
       versionLock.lastCommitId = lastCommitId;
       versionLock.version = version;
     },
@@ -121,11 +124,33 @@ export function build<AggregateShape, EventShape>(
         };
       });
     },
-    search: async (filter) => {
-      const data = Object.values(projClient).filter(filter);
+    search: async ({ filter, rawQuery, rawSearch, pagination }) => {
+      if (rawSearch) {
+        const data = Object.values(projClient).filter(rawSearch);
+        return {
+          data,
+          total: data.length,
+        };
+      }
+
+      let data;
+
+      if (filter)
+        data = Object.values(projClient).filter((item) =>
+          matches(
+            filter as Record<string, any>,
+            item.state as Record<string, any>
+          )
+        );
+      else data = Object.values(projClient).filter(rawQuery);
 
       return {
-        data,
+        data: pagination
+          ? data.slice(
+              pagination.perPage * (pagination.page - 1),
+              pagination.perPage * pagination.page
+            )
+          : data,
         total: data.length,
       };
     },

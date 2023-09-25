@@ -38,16 +38,16 @@ type ProjectionSearchParams<ProjectionShape> =
       rawSearch?: never;
     } & BasicListParams)
   | ({
-      filter: never;
-      rawQuery?: any;
+      filter?: never;
+      rawQuery: any;
       rawSearch?: never;
     } & BasicListParams)
   | {
-      filter: never;
+      filter?: never;
       rawQuery?: never;
-      rawSearch?: any;
-      pagination: never;
-      sort: never;
+      rawSearch: any;
+      pagination?: never;
+      sort?: never;
     };
 
 interface StorageSearchResults<ProjectionShape> {
