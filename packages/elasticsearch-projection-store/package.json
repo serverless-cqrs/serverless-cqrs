@@ -16,13 +16,11 @@
   "license": "ISC",
   "dependencies": {
     "@aws-sdk/credential-providers": "^3.405.0",
-    "got": "^13.0.0",
-    "pluralize": "^8.0.0"
+    "aws4": "^1.12.0",
+    "got": "^13.0.0"
   },
   "gitHead": "52c15b86e0fc0f8bcee1bae8b4d1d1f8dfcab6d6",
   "devDependencies": {
-    "@types/pluralize": "^0.0.30",
     "@types/aws4": "^1.11.3",
-    "@types/got": "^9.6.12"
-  }
+    "@types/got": "^9.6.12"  }
 }
