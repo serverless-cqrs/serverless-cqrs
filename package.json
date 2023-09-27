@@ -2,7 +2,6 @@
   "name": "root",
   "private": true,
   "devDependencies": {
-    "@types/tap": "^15.0.9",
     "tap": "^18.1.4",
     "typescript": "^5.1.6"
   },

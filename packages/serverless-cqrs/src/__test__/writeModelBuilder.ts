@@ -1,7 +1,4 @@
-import { test } from "tap";
-
-// we have to do this because the typescript compiler doesnt find tap in nodemodules, and so we need to use an old @types/tap which doesnt have mockImport yet
-const { mockRequire } = require("tap");
+import { test, mockRequire } from "tap";
 
 test("build", async (assert) => {
   const build = (params: any) => params;

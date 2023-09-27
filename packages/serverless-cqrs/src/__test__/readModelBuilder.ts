@@ -1,7 +1,4 @@
-import { test } from "tap";
-
-// we have to do this because the typescript compiler doesnt find tap in nodemodules, and so we need to use an old @types/tap which doesnt have mockImport yet
-const { mockRequire } = require("tap");
+import { test, mockRequire } from "tap";
 
 const build = (key: string) => (params: any) => ({ [key]: params });
 
@@ -16,7 +13,7 @@ const defaultOptions = {
 };
 
 test("parseEvent", async (assert) => {
-  const readModelBuilder = await mockRequire("../readModelBuilder", {
+  const readModelBuilder = await mockRequire("../readModelBuilder.ts", {
     "@serverless-cqrs/read-model": {
       repositoryBuilder: { build: build("repository") },
       queryServiceBuilder: { build: build("queryService") },
