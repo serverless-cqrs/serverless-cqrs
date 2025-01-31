@@ -30,5 +30,9 @@ export interface QueryServiceSearchResults<ProjectionShape> {
 export interface RefreshService<EventShape> {
   applyEvents: (commit: Commit<EventShape>) => Promise<void>;
   getAggregateEvents: (aggregateId: string) => Promise<EventShape[]>;
-  refresh: () => Promise<void>;
+  refresh: (options?: { reset?: boolean }) => Promise<void>;
 }
+
+export interface ReadModel<AggregateShape, EventShape>
+  extends RefreshService<EventShape>,
+    QueryService<AggregateShape> {}

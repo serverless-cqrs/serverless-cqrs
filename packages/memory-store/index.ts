@@ -103,6 +103,9 @@ export function build<AggregateShape, EventShape>(
     get: async (id) => {
       return projClient[id];
     },
+    reset: async () => {
+      projectionStore[entityName] = {};
+    },
 
     setVersionLock: async ({ version, lastCommitId }) => {
       if (versionLock.version! >= version!) throw "versionAlreadyExists";

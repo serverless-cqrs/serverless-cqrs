@@ -9,8 +9,9 @@ export interface EventStore<EventShape> {
 export interface ProjectionStore<ProjectionShape> {
   set: (projection: Projection<ProjectionShape>) => Promise<void>;
   get: (id: ID) => Promise<Projection<ProjectionShape> | undefined>;
-  setVersionLock: (versionLock: VersionLock) => Promise<void>;
+  setVersionLock: (versionLock: Required<VersionLock>) => Promise<void>;
   getVersionLock: () => Promise<VersionLock | undefined>;
+  reset: () => Promise<void>;
   batchGet: (ids: ID[]) => Promise<Projection<ProjectionShape>[]>;
   batchWrite: (obj: {
     [index: ID]: Omit<Projection<ProjectionShape>, "id">;

@@ -67,7 +67,9 @@ export function build<AggregateShape, EventShape>({
     getAggregateEvents: async (aggregateId: string) => {
       return eventStore.loadEvents(aggregateId);
     },
-    refresh: async () => {
+    refresh: async ({ reset } = {}) => {
+      if (reset) await repository.reset();
+
       while (true) {
         // load new commits
         const versionLock = await repository.getVersionLock();

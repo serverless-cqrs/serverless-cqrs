@@ -12,6 +12,7 @@ export interface ReadModelRepository<ProjectionShape, EventShape> {
   applyEvents: (id: ID, events: EventShape[], version: number) => Promise<void>;
   applyCommits: (commits: Commit<EventShape>[]) => Promise<void>;
   search: (params: any) => Promise<StorageSearchResults<ProjectionShape>>;
+  reset: () => Promise<void>;
 }
 
 export interface WriteModelRepository<AggregateShape, EventShape> {

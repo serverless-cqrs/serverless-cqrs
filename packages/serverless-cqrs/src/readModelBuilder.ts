@@ -8,13 +8,8 @@ import {
   ProjectionStore,
   EventStore,
   Reducer,
-  RefreshService,
-  QueryService,
+  ReadModel,
 } from "@serverless-cqrs/types";
-
-interface ReadModel<AggregateShape, EventShape>
-  extends RefreshService<EventShape>,
-    QueryService<AggregateShape> {}
 
 export function build<AggregateShape, EventShape>({
   reducer, // *** DOMAIN *** reducer is the pure function that reduces an event stream into the current state of an entity.

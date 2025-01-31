@@ -1,4 +1,4 @@
-import got from "got";
+import got, { Options as GotOptions } from "got";
 import * as aws4 from "aws4";
 export { HTTPError } from "got";
 
@@ -16,7 +16,7 @@ interface Params {
 
 const provider = fromNodeProviderChain();
 
-interface Options extends got.GotJSONOptions {
+interface Options extends GotOptions {
   url: URL;
 }
 const awsClient = got.extend({

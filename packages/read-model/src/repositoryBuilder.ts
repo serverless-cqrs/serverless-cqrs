@@ -118,11 +118,14 @@ export function build<ProjectionShape, EventShape>({
         const newProjection = applyEvents(events, projection);
         projections[entityId] = newProjection;
       }
-
-      await projectionStore.batchWrite(projections);
+      if (Object.keys(projections).length > 0)
+        await projectionStore.batchWrite(projections);
     },
     search: (params) => {
       return projectionStore.search(params);
+    },
+    reset: () => {
+      return projectionStore.reset();
     },
   };
 }
