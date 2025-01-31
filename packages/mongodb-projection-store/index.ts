@@ -1,5 +1,4 @@
 import { ProjectionStore, VersionLock } from "@serverless-cqrs/types";
-import { flatten } from "flat";
 import { MongoClient, MongoClientOptions, FindOptions } from "mongodb";
 
 const clients: {
