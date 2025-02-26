@@ -1,5 +1,4 @@
 import { ProjectionStore, VersionLock } from "@serverless-cqrs/types";
-import { flatten } from "flat";
 import { MongoClient, MongoClientOptions, FindOptions } from "mongodb";
 
 const clients: {
@@ -167,18 +166,15 @@ export function build<AggregateShape>(
       // } else {
       //   filter = params.rawQuery
       // }
-      const filter = params.filter && Object.keys(params.filter).length > 0
+
+      const filterArray = [{ _state: {'$ne': null}}]
+      const filterParams = params.filter && Object.keys(params.filter).length > 0
       ? flattenQuery({ _state: params.filter })
       : params.rawQuery;
-      
-      console.log(filter)
+      if (filterParams) filterArray.push(filterParams)
 
-      //filter out deleted records 
-      const combinedFilter = {
-        '$and': [
-          { _state: {'$ne': null}},
-          filter
-        ]
+      const filter:any = {
+        '$and': filterArray
       }
 
       let options: FindOptions = {};
@@ -196,8 +192,8 @@ export function build<AggregateShape>(
 
         options.sort = [field, order.toLowerCase()];
       }
-      const total = await collection.countDocuments(combinedFilter);
-      const results = await collection.find(combinedFilter, options).toArray();
+      const total = await collection.countDocuments(filter);
+      const results = await collection.find(filter, options).toArray();
 
       return {
         data: results.map(parseResult),
