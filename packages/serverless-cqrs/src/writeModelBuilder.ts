@@ -9,10 +9,12 @@ export function build<
   EventShape,
   ActionsShape extends Actions
 >({
+  aggregateName,
   actions,
   reducer,
   eventStore,
 }: {
+  aggregateName: String;
   actions: ActionsShape;
   reducer: Reducer<AggregateShape, EventShape>;
   eventStore: EventStore<EventShape>;
@@ -36,6 +38,7 @@ export function build<
   //   repository, // a repository that provides access to the data store
   // })
   return commandServiceBuilder.build({
+    aggregateName,
     actions,
     repository,
   });
