@@ -27,7 +27,7 @@ type CommandHandlers<ActionsShape extends Actions> = {
     id: ID,
     metadata: Omit<
       Optional<Parameters<ActionsShape[Property]>[1], "at">,
-      "aggregateId"
+      "aggregateId" | "aggregateName"
     >,
     ...rest: ActionsShape[Property] extends (
       state: any,
@@ -44,9 +44,11 @@ export function build<
   EventShape,
   ActionsShape extends Actions
 >({
+  aggregateName,
   actions,
   repository,
 }: {
+  aggregateName: String;
   actions: ActionsShape;
   repository: WriteModelRepository<AggregateShape, EventShape>;
 }): CommandHandlers<ActionsShape> {
@@ -61,6 +63,7 @@ export function build<
         {
           at: Date.now(),
           ...metadata,
+          aggregateName,
           aggregateId: id,
         },
         ...args
