@@ -10,7 +10,7 @@ export interface MongodbConfig extends MongoClientOptions {
   database: string;
 }
 
-const flattenQuery = (obj: Record<string, any>, prefix=''):Record<string, any> => {
+export const flattenQuery = (obj: Record<string, any>, prefix=''):Record<string, any> => {
 
   // for each deeply nested key, create key at the root which is a concatenation of all the keys to get there
   // 
@@ -129,13 +129,6 @@ export function build<AggregateShape>(
     batchWrite: async (obj) => {
       const params = Object.keys(obj).map((id) => {
         const { version, state } = obj[id];
-        // if (!state)
-        //   return {
-        //     deleteOne: {
-        //       filter: { _id: id, _version: { $lt: version } },
-        //     },
-        //   };
-        // else
           return {
             replaceOne: {
               filter: { _id: id, _version: { $lt: version } },
@@ -151,22 +144,6 @@ export function build<AggregateShape>(
       console.log(params)
       if (params.rawSearch) throw new Error("rawSearchNotSupported");
       
-      // let filter
-      // if (params.filter && Object.keys(params.filter).length > 0) {
-      //   let flattened: Record<string, string> = flatten({ _state: params.filter }, { safe: true})
-
-      //   filter = Object.keys(flattened).reduce((p, c) => {
-      //     const value = flattened[c]
-          
-      //     return {
-      //     ...p,
-      //     [c]: Array.isArray(value) ? { $in: value } : value
-      //     }
-      //   }, {})
-      // } else {
-      //   filter = params.rawQuery
-      // }
-
       const filterArray = [{ _state: {'$ne': null}}]
       const filterParams = params.filter && Object.keys(params.filter).length > 0
       ? flattenQuery({ _state: params.filter })

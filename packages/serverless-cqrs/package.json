@@ -1,11 +1,12 @@
 {
   "name": "@serverless-cqrs/main",
-  "version": "0.2.10-alpha.0",
+  "version": "1.0.0",
   "description": "The main package for serverless-cqrs",
   "main": "src/index.ts",
   "scripts": {
-    "test": "tap src/__test__/*.js"
+    "test": "tap src/__test__/*.ts"
   },
+  "type": "module",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/serverless-cqrs/serverless-cqrs.git"
@@ -24,8 +25,8 @@
   "homepage": "https://github.com/serverless-cqrs/serverless-cqrs#readme",
   "gitHead": "52c15b86e0fc0f8bcee1bae8b4d1d1f8dfcab6d6",
   "dependencies": {
-    "@serverless-cqrs/read-model": "^0.2.10-alpha.0",
-    "@serverless-cqrs/types": "^0.2.10-alpha.0",
-    "@serverless-cqrs/write-model": "^0.2.10-alpha.0"
+    "@serverless-cqrs/read-model": "^1.0.0",
+    "@serverless-cqrs/types": "^1.0.0",
+    "@serverless-cqrs/write-model": "^1.0.0"
   }
 }

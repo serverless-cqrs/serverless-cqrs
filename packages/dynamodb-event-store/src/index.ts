@@ -1,4 +1,4 @@
-import { DynamoDB, DynamoDBClientConfig } from "@aws-sdk/client-dynamodb";
+import { DynamoDB, DynamoDBClientConfig, ReturnValue } from "@aws-sdk/client-dynamodb";
 import { Commit, EventStore, RepositoryError } from "@serverless-cqrs/types";
 import { default as cuid } from "cuid";
 
@@ -89,7 +89,7 @@ export function build<EventShape>(
           events: { S: JSON.stringify(events) },
         },
         ConditionExpression: "attribute_not_exists(version)",
-        ReturnValues: "NONE",
+        ReturnValues: ReturnValue.NONE,
       };
       try {
         await dynamodb.putItem(params);

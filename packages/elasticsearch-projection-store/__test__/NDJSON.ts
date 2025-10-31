@@ -1,5 +1,5 @@
 import { test } from "tap";
-import { stringify } from "../NDJSON";
+import { stringify } from "../NDJSON.js";
 
 test("stringify", (assert) => {
   const expected = '{"foo":"bar"}\n{"bar":"baz"}\n';

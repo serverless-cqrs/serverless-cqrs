@@ -20,6 +20,7 @@ let projections: Record<string, any> = {
 let versionLock = {};
 
 const projectionStore = {
+  reset: async () => {},
   get: async (id: string) => projections[id],
   set: async (obj: any) => {
     projections[obj.id] = obj;

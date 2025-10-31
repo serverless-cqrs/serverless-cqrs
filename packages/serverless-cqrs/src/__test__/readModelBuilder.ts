@@ -1,4 +1,4 @@
-import { test, mockRequire } from "tap";
+import { test } from "tap";
 
 const build = (key: string) => (params: any) => ({ [key]: params });
 
@@ -13,7 +13,7 @@ const defaultOptions = {
 };
 
 test("parseEvent", async (assert) => {
-  const readModelBuilder = await mockRequire("../readModelBuilder.ts", {
+  const readModelBuilder = await assert.mockImport("../readModelBuilder.ts", {
     "@serverless-cqrs/read-model": {
       repositoryBuilder: { build: build("repository") },
       queryServiceBuilder: { build: build("queryService") },

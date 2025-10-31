@@ -1,9 +1,9 @@
-import { test, mockRequire } from "tap";
+import { test } from "tap";
 
 test("build", async (assert) => {
   const build = (params: any) => params;
 
-  const writeModelBuilder = await mockRequire("../writeModelBuilder.ts", {
+  const writeModelBuilder = await assert.mockImport("../writeModelBuilder.ts", {
     "@serverless-cqrs/write-model": {
       repositoryBuilder: { build },
       commandServiceBuilder: { build },
@@ -18,7 +18,10 @@ test("build", async (assert) => {
 
   const eventStore = {};
 
+  const aggregateName = "TestAggregate";
+
   const expected = {
+    aggregateName,
     actions,
     repository: {
       eventStore,
@@ -26,11 +29,12 @@ test("build", async (assert) => {
     },
   };
 
-  const readModel = writeModelBuilder.build({
+  const writeModel = writeModelBuilder.build({
+    aggregateName,
     eventStore,
     reducer,
     actions,
   });
 
-  assert.same(readModel, expected);
+  assert.same(writeModel, expected);
 });

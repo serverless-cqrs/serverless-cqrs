@@ -1,6 +1,6 @@
 {
   "name": "@serverless-cqrs/elasticsearch-projection-store",
-  "version": "0.2.10-alpha.0",
+  "version": "1.0.0",
   "description": "A repository adapter for serverless-cqrs",
   "main": "index.js",
   "scripts": {
@@ -16,14 +16,13 @@
   "author": "Yonah Forst",
   "license": "ISC",
   "dependencies": {
-    "@aws-sdk/credential-providers": "^3.405.0",
+    "@aws-sdk/credential-providers": "^3.921.0",
     "aws4": "^1.12.0",
-    "got": "^13.0.0"
+    "got": "^14.6.1"
   },
   "gitHead": "52c15b86e0fc0f8bcee1bae8b4d1d1f8dfcab6d6",
   "devDependencies": {
-    "@types/aws4": "^1.11.3",
     "@types/got": "^9.6.12",
-    "nock": "^13.3.3"
+    "nock": "^14.0.10"
   }
 }

@@ -22,6 +22,7 @@ test("build", async (assert) => {
         },
         metadata: {
           at: 123,
+          aggregateName: 'fooz',
           aggregateId: "123",
         },
       },
@@ -42,6 +43,7 @@ test("build", async (assert) => {
   };
 
   const commandService = build({
+    aggregateName: 'fooz',
     repository,
     actions,
   });

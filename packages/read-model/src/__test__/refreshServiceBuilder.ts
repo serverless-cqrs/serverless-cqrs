@@ -62,6 +62,7 @@ let versionLock = {
 };
 
 const repository: ReadModelRepository<any, any> = {
+  reset: async () => {},
   applyEvents: async (entityId: string, events: any[], version: number) => {
     appliedEvents.push({ entityId, events, version });
   },

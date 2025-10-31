@@ -1,12 +1,12 @@
 {
   "name": "@serverless-cqrs/mongodb-projection-store",
-  "version": "0.2.10-alpha.0",
+  "version": "1.0.0",
   "description": "A repository adapter for serverless-cqrs",
   "main": "index.js",
   "scripts": {
     "test": "tap __test__/*"
   },
-  
+  "type": "module",
   "keywords": [
     "serverless",
     "cqrs",
@@ -20,8 +20,5 @@
     "flat": "^6.0.1",
     "mongodb": "^6.1.0"
   },
-  "gitHead": "52c15b86e0fc0f8bcee1bae8b4d1d1f8dfcab6d6",
-  "devDependencies": {
-    "@types/aws4": "^1.11.3"
-  }
+  "gitHead": "52c15b86e0fc0f8bcee1bae8b4d1d1f8dfcab6d6"
 }

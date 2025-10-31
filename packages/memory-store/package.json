@@ -1,8 +1,9 @@
 {
   "name": "@serverless-cqrs/memory-store",
-  "version": "0.2.10-alpha.0",
+  "version": "1.0.0",
   "description": "An in-memory repository store for serverless-cqrs",
   "main": "index.ts",
+  "type": "module",
   "scripts": {
     "test": "tap __test__/*"
   },
@@ -16,6 +17,6 @@
   "license": "ISC",
   "gitHead": "52c15b86e0fc0f8bcee1bae8b4d1d1f8dfcab6d6",
   "dependencies": {
-    "@serverless-cqrs/types": "^0.2.10-alpha.0"
+    "@serverless-cqrs/types": "^1.0.0"
   }
 }

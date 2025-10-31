@@ -3,6 +3,7 @@ import { build } from "../queryServiceBuilder";
 import { ReadModelRepository } from "@serverless-cqrs/types";
 
 const repository: ReadModelRepository<any, any> = {
+  reset: async () => {},
   getById: async (id) => ({
     id,
     version: 0,

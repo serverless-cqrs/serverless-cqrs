@@ -1,4 +1,4 @@
-import makeSignedRequest, { HTTPError } from "./makeSignedRequest";
+import makeSignedRequest, { HTTPError } from "./makeSignedRequest.js";
 import {
   ProjectionSearchParams,
   ProjectionStore,
@@ -6,7 +6,7 @@ import {
 } from "@serverless-cqrs/types";
 const camelToSnakeCase = (str: string) =>
   str.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`);
-import * as NDJSON from "./NDJSON";
+import * as NDJSON from "./NDJSON.js";
 
 const parseResult = <AggregateShape>({
   _id,
@@ -95,6 +95,9 @@ export function build<AggregateShape>(
   };
 
   return {
+    reset: async () => {
+      // TODO
+    },
     set: async ({ id, version, state }) => {
       const { body } = await makeSignedRequest({
         ...defaults,

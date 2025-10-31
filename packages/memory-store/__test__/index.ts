@@ -1,5 +1,5 @@
 import { test } from "tap";
-import { build } from "../index";
+import { build } from "../index.js";
 // const { build } = require("../index");
 
 test("listeners", async (assert) => {
@@ -140,8 +140,7 @@ test("set", async (assert) => {
         version: 0,
         state: "foobar",
       }),
-    "versionAlreadyExists",
-    "can't set if the version already exists"
+    "versionAlreadyExists"
   );
 });
 
@@ -192,8 +191,7 @@ test("setVersionLock", async (assert) => {
         version: 0,
         lastCommitId: "123",
       }),
-    "versionAlreadyExists",
-    "can't set if version already exists"
+    "versionAlreadyExists"
   );
 });
 
