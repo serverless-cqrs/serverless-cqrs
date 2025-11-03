@@ -102,13 +102,15 @@ export function build<ProjectionShape, EventShape>({
     },
     applyCommits: async (commits) => {
       const projections = {} as { [index: ID]: Projection<ProjectionShape> };
+      const ids = commits.map(({ entityId}) => entityId);
+      const values = await projectionStore.batchGet(ids);
+
       for (const { entityId, version, events } of commits) {
-        const projection = projections[entityId] ||
-          (await projectionStore.get(entityId)) || {
+        const projection =  projections[entityId] || values.find((v) => v.id == entityId) || {
             id: entityId,
             state: null,
             version: 0,
-          };
+          } as Projection<ProjectionShape>
 
         // if the commit version is higher than the projection version it means that there are events missing
         if (projection.version < version) throw new Error("versionMismatch");

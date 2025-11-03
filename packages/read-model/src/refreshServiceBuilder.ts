@@ -73,6 +73,7 @@ export function build<AggregateShape, EventShape>({
       while (true) {
         // load new commits
         const versionLock = await repository.getVersionLock();
+        console.log('versionLock:', versionLock.version)
         const commits = await eventStore.listCommits(versionLock.lastCommitId);
 
         if (commits.length == 0)
