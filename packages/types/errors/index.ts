@@ -1,7 +1,7 @@
-type PeristanceErrorName = "versionExists";
+type ConcurrencyErrorName = "ConcurrencyError";
 
-export class RepositoryError extends Error {
-  name: PeristanceErrorName;
+export class ConcurrencyError extends Error {
+  name: ConcurrencyErrorName;
   message: string;
   cause: any;
 
@@ -10,7 +10,7 @@ export class RepositoryError extends Error {
     message,
     cause,
   }: {
-    name: PeristanceErrorName;
+    name: ConcurrencyErrorName;
     message: string;
     cause?: any;
   }) {
@@ -20,3 +20,4 @@ export class RepositoryError extends Error {
     this.cause = cause;
   }
 }
+
