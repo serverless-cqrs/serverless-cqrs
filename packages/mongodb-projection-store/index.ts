@@ -79,9 +79,6 @@ export function build<AggregateShape>(
 
   return {
     set: async ({ id, version, state }) => {
-      // if (!state) 
-      //   await collection.deleteOne({ _id: id, _version: { $lt: version } })
-      // else 
         await collection.replaceOne(
           { _id: id, _version: { $lt: version } },
           { _version: version, _state: state },

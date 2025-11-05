@@ -4,6 +4,7 @@
 
   The command service builder is takes two parameters:
   build({
+    aggregateName, // string aggregate name
     actions, // an object containing action functions
     repository, // a repository that provides access to the data store
   })
