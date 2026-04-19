@@ -138,7 +138,6 @@ export function build<AggregateShape>(
       await collection.bulkWrite(params);
     },
     search: async (params) => {
-      console.log(params)
       if (params.rawSearch) throw new Error("rawSearchNotSupported");
       
       const filterArray = [{ _state: {'$ne': null}}]
