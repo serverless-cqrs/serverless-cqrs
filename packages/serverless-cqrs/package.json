@@ -6,7 +6,7 @@
   "scripts": {
     "test": "tap src/__test__/*.ts"
   },
-  "type": "module",
+  
   "repository": {
     "type": "git",
     "url": "git+https://github.com/serverless-cqrs/serverless-cqrs.git"
