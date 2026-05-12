@@ -107,7 +107,9 @@ export function build<AggregateShape>(
       );
     },
     getVersionLock: async () => {
-      const res = await versionLock.findOne({ _id: entityName });
+      // use readPreference primary to ensure we always read the latest version lock, even if we're connected to a replica set
+      // because we process commits sequentially, we can be sure that if the version lock is updated, it will be available on the primary by the time we read it
+      const res = await versionLock.findOne({ _id: entityName }, { readPreference: "primary"});
       if (!res) return;
 
       return { lastCommitId: res._state, version: res._version };
@@ -145,7 +147,7 @@ export function build<AggregateShape>(
       ? flattenQuery({ _state: params.filter })
       : params.rawQuery;
       if (filterParams) filterArray.push(filterParams)
-
+      console.log(filterParams)
       const filter:any = {
         '$and': filterArray
       }
