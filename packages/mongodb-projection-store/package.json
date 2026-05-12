@@ -17,7 +17,7 @@
   "dependencies": {
     "@aws-sdk/credential-providers": "^3.405.0",
     "flat": "^6.0.1",
-    "mongodb": "^6.1.0"
+    "mongodb": "^6.13.1"
   },
   "gitHead": "52c15b86e0fc0f8bcee1bae8b4d1d1f8dfcab6d6"
 }
