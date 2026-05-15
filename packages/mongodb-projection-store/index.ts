@@ -52,7 +52,7 @@ export const getDb = ({ uri, database, ...config }: MongodbConfig) => {
 interface Result<AggregateShape> {
   _id: string;
   _version: number;
-  _state: AggregateShape;
+  _state?: AggregateShape;
 }
 
 const parseResult = <AggregateShape>({
@@ -81,7 +81,7 @@ export function build<AggregateShape>(
     set: async ({ id, version, state }) => {
         await collection.replaceOne(
           { _id: id, _version: { $lt: version } },
-          { _version: version, _state: state },
+          { _version: version, ...(state && { _state: state }) },
           { upsert: true }
         );
     },
@@ -131,7 +131,7 @@ export function build<AggregateShape>(
           return {
             replaceOne: {
               filter: { _id: id, _version: { $lt: version } },
-              replacement: { _id: id, _version: version, _state: state },
+              replacement: { _id: id, _version: version, ...(state && { _state: state }) },
               upsert: true,
             },
           };
@@ -142,11 +142,11 @@ export function build<AggregateShape>(
     search: async (params) => {
       if (params.rawSearch) throw new Error("rawSearchNotSupported");
       
-      const filterArray = [{ _state: {'$ne': null}}]
+      const filterArray = [{ _state: {'$exists':true}}]
       const filterParams = params.filter && Object.keys(params.filter).length > 0
       ? flattenQuery({ _state: params.filter })
       : params.rawQuery;
-      if (filterParams) filterArray.push(filterParams)
+      if (filterParams) filterArray.unshift(filterParams)
       console.log(filterParams)
       const filter:any = {
         '$and': filterArray
