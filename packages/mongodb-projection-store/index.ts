@@ -43,10 +43,18 @@ export const flattenQuery = (obj: Record<string, any>, prefix=''):Record<string,
 }
 
 export const getDb = ({ uri, database, ...config }: MongodbConfig) => {
-  if (clients[uri]) return clients[uri].db(database);
-  const newClient = new MongoClient(uri, config);
-  clients[uri] = newClient;
-  return newClient.db(database);
+  if (!clients[uri]) {
+    const newClient = new MongoClient(uri, config);
+    // Once a client's topology closes (e.g. its first connect attempt failed),
+    // the driver never reopens it on subsequent operations — every call throws
+    // MongoTopologyClosedError forever. Evict it so the next operation builds
+    // a fresh client instead.
+    newClient.on("topologyClosed", () => {
+      if (clients[uri] === newClient) delete clients[uri];
+    });
+    clients[uri] = newClient;
+  }
+  return clients[uri].db(database);
 };
 
 interface Result<AggregateShape> {
@@ -73,34 +81,36 @@ export function build<AggregateShape>(
   { entityName }: BuildParams,
   config: MongodbConfig
 ): ProjectionStore<AggregateShape> {
-  const db = getDb(config);
-  const collection = db.collection<Result<AggregateShape>>(entityName);
-  const versionLock = db.collection<Result<string>>("versionLock");
+  // Resolve db/collection handles per operation (they're cheap namespace
+  // wrappers, no I/O) so that operations always go through the client cache —
+  // if a poisoned client was evicted, the next operation gets a fresh one.
+  const collection = () => getDb(config).collection<Result<AggregateShape>>(entityName);
+  const versionLock = () => getDb(config).collection<Result<string>>("versionLock");
 
   return {
     set: async ({ id, version, state }) => {
-        await collection.replaceOne(
+        await collection().replaceOne(
           { _id: id, _version: { $lt: version } },
           { _version: version, ...(state && { _state: state }) },
           { upsert: true }
         );
     },
     get: async (id) => {
-      const res = await collection.findOne({ _id: id });
+      const res = await collection().findOne({ _id: id });
       if (!res) return;
 
       return parseResult(res);
     },
     reset: async () => {
-      await versionLock.deleteOne({ _id: entityName });
-      await db.dropCollection(entityName);
+      await versionLock().deleteOne({ _id: entityName });
+      await getDb(config).dropCollection(entityName);
     },
 
     setVersionLock: async ({
       version,
       lastCommitId,
     }: Required<VersionLock>) => {
-      await versionLock.replaceOne(
+      await versionLock().replaceOne(
         { _id: entityName, _version: { $lt: version } },
         { _version: version, _state: lastCommitId },
         { upsert: true }
@@ -109,13 +119,13 @@ export function build<AggregateShape>(
     getVersionLock: async () => {
       // use readPreference primary to ensure we always read the latest version lock, even if we're connected to a replica set
       // because we process commits sequentially, we can be sure that if the version lock is updated, it will be available on the primary by the time we read it
-      const res = await versionLock.findOne({ _id: entityName }, { readPreference: "primary"});
+      const res = await versionLock().findOne({ _id: entityName }, { readPreference: "primary"});
       if (!res) return;
 
       return { lastCommitId: res._state, version: res._version };
     },
     batchGet: async (ids) => {
-      const res = await collection
+      const res = await collection()
         .find({
           _id: {
             $in: ids,
@@ -137,7 +147,7 @@ export function build<AggregateShape>(
           };
       });
 
-      await collection.bulkWrite(params);
+      await collection().bulkWrite(params);
     },
     search: async (params) => {
       if (params.rawSearch) throw new Error("rawSearchNotSupported");
@@ -147,7 +157,6 @@ export function build<AggregateShape>(
       ? flattenQuery({ _state: params.filter })
       : params.rawQuery;
       if (filterParams) filterArray.unshift(filterParams)
-      console.log(filterParams)
       const filter:any = {
         '$and': filterArray
       }
@@ -167,8 +176,8 @@ export function build<AggregateShape>(
 
         options.sort = [field, order.toLowerCase()];
       }
-      const total = await collection.countDocuments(filter);
-      const results = await collection.find(filter, options).toArray();
+      const total = await collection().countDocuments(filter);
+      const results = await collection().find(filter, options).toArray();
 
       return {
         data: results.map(parseResult),

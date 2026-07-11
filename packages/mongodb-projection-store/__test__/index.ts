@@ -1,5 +1,5 @@
 import { test } from "tap";
-import { flattenQuery } from "../index.js";
+import { flattenQuery } from "../index";
 
 // Mock MongoDB client and collections
 class MockCollection {
@@ -136,9 +136,19 @@ class MockDb {
 
 class MockMongoClient {
   private mockDb = new MockDb();
+  listeners: Record<string, Array<() => void>> = {};
 
   db(_dbName: string) {
     return this.mockDb;
+  }
+
+  on(event: string, listener: () => void) {
+    (this.listeners[event] ??= []).push(listener);
+    return this;
+  }
+
+  emit(event: string) {
+    for (const listener of this.listeners[event] ?? []) listener();
   }
 }
 
@@ -179,7 +189,7 @@ test("flattenQuery - mixed nested and flat", async (assert) => {
 });
 
 test("set", async (assert) => {
-  const storage = await assert.mockImport("../index.js", {
+  const storage = await assert.mockRequire("../index", {
     mongodb: {
       MongoClient: MockMongoClient,
     },
@@ -207,7 +217,7 @@ test("set", async (assert) => {
 });
 
 test("set - version constraint", async (assert) => {
-  const storage = await assert.mockImport("../index.js", {
+  const storage = await assert.mockRequire("../index", {
     mongodb: {
       MongoClient: MockMongoClient,
     },
@@ -237,7 +247,7 @@ test("set - version constraint", async (assert) => {
 });
 
 test("get", async (assert) => {
-  const storage = await assert.mockImport("../index.js", {
+  const storage = await assert.mockRequire("../index", {
     mongodb: {
       MongoClient: MockMongoClient,
     },
@@ -265,7 +275,7 @@ test("get", async (assert) => {
 });
 
 test("get - non-existent", async (assert) => {
-  const storage = await assert.mockImport("../index.js", {
+  const storage = await assert.mockRequire("../index", {
     mongodb: {
       MongoClient: MockMongoClient,
     },
@@ -281,7 +291,7 @@ test("get - non-existent", async (assert) => {
 });
 
 test("setVersionLock", async (assert) => {
-  const storage = await assert.mockImport("../index.js", {
+  const storage = await assert.mockRequire("../index", {
     mongodb: {
       MongoClient: MockMongoClient,
     },
@@ -307,7 +317,7 @@ test("setVersionLock", async (assert) => {
 });
 
 test("setVersionLock - version constraint", async (assert) => {
-  const storage = await assert.mockImport("../index.js", {
+  const storage = await assert.mockRequire("../index", {
     mongodb: {
       MongoClient: MockMongoClient,
     },
@@ -335,7 +345,7 @@ test("setVersionLock - version constraint", async (assert) => {
 });
 
 test("getVersionLock", async (assert) => {
-  const storage = await assert.mockImport("../index.js", {
+  const storage = await assert.mockRequire("../index", {
     mongodb: {
       MongoClient: MockMongoClient,
     },
@@ -361,7 +371,7 @@ test("getVersionLock", async (assert) => {
 });
 
 test("batchGet", async (assert) => {
-  const storage = await assert.mockImport("../index.js", {
+  const storage = await assert.mockRequire("../index", {
     mongodb: {
       MongoClient: MockMongoClient,
     },
@@ -412,7 +422,7 @@ test("batchGet", async (assert) => {
 });
 
 test("batchWrite", async (assert) => {
-  const storage = await assert.mockImport("../index.js", {
+  const storage = await assert.mockRequire("../index", {
     mongodb: {
       MongoClient: MockMongoClient,
     },
@@ -442,7 +452,7 @@ test("batchWrite", async (assert) => {
 });
 
 test("search - filter", async (assert) => {
-  const storage = await assert.mockImport("../index.js", {
+  const storage = await assert.mockRequire("../index", {
     mongodb: {
       MongoClient: MockMongoClient,
     },
@@ -485,7 +495,7 @@ test("search - filter", async (assert) => {
 });
 
 test("search - nested filter", async (assert) => {
-  const storage = await assert.mockImport("../index.js", {
+  const storage = await assert.mockRequire("../index", {
     mongodb: {
       MongoClient: MockMongoClient,
     },
@@ -517,7 +527,7 @@ test("search - nested filter", async (assert) => {
 });
 
 test("search - pagination", async (assert) => {
-  const storage = await assert.mockImport("../index.js", {
+  const storage = await assert.mockRequire("../index", {
     mongodb: {
       MongoClient: MockMongoClient,
     },
@@ -549,7 +559,7 @@ test("search - pagination", async (assert) => {
 });
 
 test("search - sorting", async (assert) => {
-  const storage = await assert.mockImport("../index.js", {
+  const storage = await assert.mockRequire("../index", {
     mongodb: {
       MongoClient: MockMongoClient,
     },
@@ -602,7 +612,7 @@ test("search - sorting", async (assert) => {
 });
 
 test("search - sort by id", async (assert) => {
-  const storage = await assert.mockImport("../index.js", {
+  const storage = await assert.mockRequire("../index", {
     mongodb: {
       MongoClient: MockMongoClient,
     },
@@ -645,7 +655,7 @@ test("search - sort by id", async (assert) => {
 });
 
 test("search - rawSearch not supported", async (assert) => {
-  const storage = await assert.mockImport("../index.js", {
+  const storage = await assert.mockRequire("../index", {
     mongodb: {
       MongoClient: MockMongoClient,
     },
@@ -664,7 +674,7 @@ test("search - rawSearch not supported", async (assert) => {
 });
 
 test("search - rawQuery", async (assert) => {
-  const storage = await assert.mockImport("../index.js", {
+  const storage = await assert.mockRequire("../index", {
     mongodb: {
       MongoClient: MockMongoClient,
     },
@@ -690,7 +700,7 @@ test("search - rawQuery", async (assert) => {
 });
 
 test("reset", async (assert) => {
-  const storage = await assert.mockImport("../index.js", {
+  const storage = await assert.mockRequire("../index", {
     mongodb: {
       MongoClient: MockMongoClient,
     },
@@ -719,4 +729,37 @@ test("reset", async (assert) => {
 
   assert.equal(result, undefined, "clears projections after reset");
   assert.equal(versionLock, undefined, "clears version lock after reset");
+});
+
+test("topologyClosed - evicts client and next operation builds a fresh one", async (assert) => {
+  const instances: MockMongoClient[] = [];
+  class TrackingMockClient extends MockMongoClient {
+    constructor(..._args: any[]) {
+      super();
+      instances.push(this);
+    }
+  }
+
+  const storage = await assert.mockRequire("../index", {
+    mongodb: {
+      MongoClient: TrackingMockClient,
+    },
+  });
+
+  const adapter = storage.build(
+    { entityName: "foo" },
+    { uri: "mongodb://localhost", database: "test" }
+  );
+
+  await adapter.set({ id: "123", version: 1, state: { foo: "bar" } });
+  await adapter.set({ id: "456", version: 1, state: { foo: "baz" } });
+  assert.equal(instances.length, 1, "healthy client is reused across operations");
+
+  instances[0].emit("topologyClosed");
+
+  await adapter.set({ id: "789", version: 1, state: { foo: "qux" } });
+  assert.equal(instances.length, 2, "closed client is evicted and replaced on next operation");
+
+  await adapter.get("789");
+  assert.equal(instances.length, 2, "replacement client is cached and reused");
 });
