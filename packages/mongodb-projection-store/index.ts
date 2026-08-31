@@ -42,6 +42,22 @@ export const flattenQuery = (obj: Record<string, any>, prefix=''):Record<string,
 
 }
 
+// Query operators that also match documents where the field is absent.
+const MATCHES_MISSING = ["$ne", "$nin", "$not", "$exists"];
+
+// True if `value` could match a document that lacks the field being filtered.
+// `{ field: null }` and the operators above all match absent fields; plain
+// equality, $in, and range operators do not.
+export const canMatchMissing = (value: unknown): boolean => {
+  if (value === null) return true;
+  if (Array.isArray(value)) return value.some(canMatchMissing);
+  if (typeof value === "object")
+    return Object.entries(value as Record<string, unknown>).some(
+      ([k, v]) => MATCHES_MISSING.includes(k) || canMatchMissing(v)
+    );
+  return false;
+};
+
 export const getDb = ({ uri, database, ...config }: MongodbConfig) => {
   if (!clients[uri]) {
     const newClient = new MongoClient(uri, config);
@@ -152,14 +168,30 @@ export function build<AggregateShape>(
     search: async (params) => {
       if (params.rawSearch) throw new Error("rawSearchNotSupported");
       
-      const filterArray = [{ _state: {'$exists':true}}]
-      const filterParams = params.filter && Object.keys(params.filter).length > 0
-      ? flattenQuery({ _state: params.filter })
-      : params.rawQuery;
-      if (filterParams) filterArray.unshift(filterParams)
-      const filter:any = {
-        '$and': filterArray
-      }
+      const hasFilter =
+        !!params.filter && Object.keys(params.filter).length > 0;
+      const filterParams = hasFilter
+        ? flattenQuery({ _state: params.filter })
+        : params.rawQuery;
+
+      // `{ _state: { $exists: true } }` excludes tombstones — documents left
+      // holding only _id/_version after a delete. It is redundant once the
+      // filter constrains a _state.* field (matching _state.foo implies _state
+      // exists), and it is expensive: no _state.* index can answer $exists on
+      // _state, so DocumentDB loads every matching document to evaluate it.
+      // On the prod policy collection that made search's count scan cost ~1ms
+      // per index entry (34-71s) instead of running index-only.
+      //
+      // Negation operators and null equality do match absent fields, so the
+      // guard stays whenever the filter itself could match a tombstone.
+      const needsStateGuard = !hasFilter || canMatchMissing(params.filter);
+
+      const filterArray: any[] = [];
+      if (filterParams) filterArray.push(filterParams);
+      if (needsStateGuard) filterArray.push({ _state: { $exists: true } });
+
+      const filter: any =
+        filterArray.length > 1 ? { $and: filterArray } : filterArray[0] ?? {};
 
       let options: FindOptions = {};
       if (params.pagination) {

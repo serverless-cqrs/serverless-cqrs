@@ -1,5 +1,9 @@
 import { test } from "tap";
-import { flattenQuery } from "../index";
+import { flattenQuery, canMatchMissing } from "../index";
+
+// Filters the adapter handed to the driver, newest last. Lets tests assert on
+// the query shape itself, not just the rows it happens to return.
+const capturedFilters: any[] = [];
 
 // Mock MongoDB client and collections
 class MockCollection {
@@ -25,30 +29,36 @@ class MockCollection {
     return null;
   }
 
-  find(filter: any, options?: any) {
-    let results = Array.from(this.data.values());
-    
-    // Apply filter
-    if (filter.$and) {
-      results = results.filter((doc: any) => {
-        return filter.$and.every((condition: any) => {
-          // Check for _state: { $ne: null }
-          if (condition._state && condition._state.$ne === null) {
-            return doc._state !== null;
-          }
-          // Check other conditions
-          return Object.keys(condition).every((key) => {
-            if (key.startsWith('_state.')) {
-              const stateKey = key.substring(7);
-              const value = condition[key];
-              return this.getNestedValue(doc._state, stateKey) === value;
-            }
-            return true;
-          });
-        });
-      });
+  private matchesCondition(doc: any, condition: any): boolean {
+    // Check for _state: { $ne: null }
+    if (condition._state && condition._state.$ne === null) {
+      return doc._state !== null;
     }
-    
+    // Check other conditions
+    return Object.keys(condition).every((key) => {
+      if (key.startsWith('_state.')) {
+        const stateKey = key.substring(7);
+        const value = condition[key];
+        return this.getNestedValue(doc._state, stateKey) === value;
+      }
+      return true;
+    });
+  }
+
+  find(filter: any, options?: any) {
+    capturedFilters.push(filter);
+    let results = Array.from(this.data.values());
+
+    // Apply filter. The adapter drops the $and wrapper when a single condition
+    // is enough, so both shapes have to be handled.
+    if (filter.$and) {
+      results = results.filter((doc: any) =>
+        filter.$and.every((condition: any) => this.matchesCondition(doc, condition))
+      );
+    } else if (!filter._id) {
+      results = results.filter((doc: any) => this.matchesCondition(doc, filter));
+    }
+
     if (filter._id && filter._id.$in) {
       results = results.filter((doc: any) => filter._id.$in.includes(doc._id));
     }
@@ -762,4 +772,83 @@ test("topologyClosed - evicts client and next operation builds a fresh one", asy
 
   await adapter.get("789");
   assert.equal(instances.length, 2, "replacement client is cached and reused");
+});
+
+test("canMatchMissing", async (assert) => {
+  assert.notOk(canMatchMissing({ status: "inforce" }), "plain equality cannot match absent");
+  assert.notOk(
+    canMatchMissing({ status: { $in: ["inforce", "new"] } }),
+    "$in cannot match absent"
+  );
+  assert.notOk(
+    canMatchMissing({ userId: { id: "a", source: "b" } }),
+    "nested equality cannot match absent"
+  );
+  assert.ok(canMatchMissing({ status: { $ne: "canceled" } }), "$ne matches absent");
+  assert.ok(canMatchMissing({ status: { $nin: ["canceled"] } }), "$nin matches absent");
+  assert.ok(canMatchMissing({ status: null }), "null equality matches absent");
+  assert.ok(
+    canMatchMissing({ terms: { period: { $ne: null } } }),
+    "detects operators nested below the top level"
+  );
+});
+
+test("search - omits the _state guard when the filter cannot match a tombstone", async (assert) => {
+  const storage = await assert.mockRequire("../index", {
+    mongodb: { MongoClient: MockMongoClient },
+  });
+  const adapter = storage.build(
+    { entityName: "foo" },
+    { uri: "mongodb://localhost", database: "test" }
+  );
+
+  capturedFilters.length = 0;
+  await adapter.search({ filter: { foo: "bar" } });
+
+  // No _state.* index can answer $exists on _state, so including the guard
+  // forces a document fetch per index entry. Dropping it is what keeps the
+  // count index-only.
+  assert.same(
+    capturedFilters[capturedFilters.length - 1],
+    { "_state.foo": "bar" },
+    "filter goes to the driver bare, with no $and and no $exists guard"
+  );
+});
+
+test("search - keeps the _state guard when the filter could match a tombstone", async (assert) => {
+  const storage = await assert.mockRequire("../index", {
+    mongodb: { MongoClient: MockMongoClient },
+  });
+  const adapter = storage.build(
+    { entityName: "foo" },
+    { uri: "mongodb://localhost", database: "test" }
+  );
+
+  capturedFilters.length = 0;
+  await adapter.search({ filter: { foo: { $ne: "bar" } } });
+
+  assert.same(
+    capturedFilters[capturedFilters.length - 1],
+    { $and: [{ "_state.foo": { $ne: "bar" } }, { _state: { $exists: true } }] },
+    "$ne keeps the guard, since it would otherwise match tombstones"
+  );
+});
+
+test("search - keeps the _state guard when there is no filter", async (assert) => {
+  const storage = await assert.mockRequire("../index", {
+    mongodb: { MongoClient: MockMongoClient },
+  });
+  const adapter = storage.build(
+    { entityName: "foo" },
+    { uri: "mongodb://localhost", database: "test" }
+  );
+
+  capturedFilters.length = 0;
+  await adapter.search({});
+
+  assert.same(
+    capturedFilters[capturedFilters.length - 1],
+    { _state: { $exists: true } },
+    "unfiltered search still excludes tombstones"
+  );
 });
