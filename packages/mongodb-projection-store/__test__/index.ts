@@ -793,62 +793,59 @@ test("canMatchMissing", async (assert) => {
   );
 });
 
-test("search - omits the _state guard when the filter cannot match a tombstone", async (assert) => {
+// A search issues countDocuments and then find, and the mock routes both
+// through find(), so capturedFilters is [countFilter, findFilter].
+const searchAdapter = async (assert: any) => {
   const storage = await assert.mockRequire("../index", {
     mongodb: { MongoClient: MockMongoClient },
   });
-  const adapter = storage.build(
+  return storage.build(
     { entityName: "foo" },
     { uri: "mongodb://localhost", database: "test" }
   );
+};
+
+test("search - count drops the _state guard, find keeps it", async (assert) => {
+  const adapter = await searchAdapter(assert);
 
   capturedFilters.length = 0;
   await adapter.search({ filter: { foo: "bar" } });
+  const [countFilter, findFilter] = capturedFilters;
 
-  // No _state.* index can answer $exists on _state, so including the guard
-  // forces a document fetch per index entry. Dropping it is what keeps the
-  // count index-only.
+  // Bare filter lets DocumentDB answer the count from the index alone
+  // (IXONLYSCAN) instead of fetching a document per index entry.
+  assert.same(countFilter, { "_state.foo": "bar" }, "count filter has no guard");
+
+  // Redundant for correctness, but it keeps the planner on the _id_ index
+  // rather than scanning every match and blocking-sorting to satisfy the sort.
   assert.same(
-    capturedFilters[capturedFilters.length - 1],
-    { "_state.foo": "bar" },
-    "filter goes to the driver bare, with no $and and no $exists guard"
+    findFilter,
+    { $and: [{ "_state.foo": "bar" }, { _state: { $exists: true } }] },
+    "find filter keeps the guard"
   );
 });
 
-test("search - keeps the _state guard when the filter could match a tombstone", async (assert) => {
-  const storage = await assert.mockRequire("../index", {
-    mongodb: { MongoClient: MockMongoClient },
-  });
-  const adapter = storage.build(
-    { entityName: "foo" },
-    { uri: "mongodb://localhost", database: "test" }
-  );
+test("search - both keep the guard when the filter could match a tombstone", async (assert) => {
+  const adapter = await searchAdapter(assert);
 
   capturedFilters.length = 0;
   await adapter.search({ filter: { foo: { $ne: "bar" } } });
+  const [countFilter, findFilter] = capturedFilters;
 
-  assert.same(
-    capturedFilters[capturedFilters.length - 1],
-    { $and: [{ "_state.foo": { $ne: "bar" } }, { _state: { $exists: true } }] },
-    "$ne keeps the guard, since it would otherwise match tombstones"
-  );
+  const expected = {
+    $and: [{ "_state.foo": { $ne: "bar" } }, { _state: { $exists: true } }],
+  };
+  assert.same(countFilter, expected, "$ne keeps the guard on the count");
+  assert.same(findFilter, expected, "and on the find");
 });
 
-test("search - keeps the _state guard when there is no filter", async (assert) => {
-  const storage = await assert.mockRequire("../index", {
-    mongodb: { MongoClient: MockMongoClient },
-  });
-  const adapter = storage.build(
-    { entityName: "foo" },
-    { uri: "mongodb://localhost", database: "test" }
-  );
+test("search - both keep the guard when there is no filter", async (assert) => {
+  const adapter = await searchAdapter(assert);
 
   capturedFilters.length = 0;
   await adapter.search({});
+  const [countFilter, findFilter] = capturedFilters;
 
-  assert.same(
-    capturedFilters[capturedFilters.length - 1],
-    { _state: { $exists: true } },
-    "unfiltered search still excludes tombstones"
-  );
+  assert.same(countFilter, { _state: { $exists: true } }, "unfiltered count excludes tombstones");
+  assert.same(findFilter, { _state: { $exists: true } }, "unfiltered find excludes tombstones");
 });

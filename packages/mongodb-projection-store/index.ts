@@ -175,23 +175,35 @@ export function build<AggregateShape>(
         : params.rawQuery;
 
       // `{ _state: { $exists: true } }` excludes tombstones — documents left
-      // holding only _id/_version after a delete. It is redundant once the
-      // filter constrains a _state.* field (matching _state.foo implies _state
-      // exists), and it is expensive: no _state.* index can answer $exists on
-      // _state, so DocumentDB loads every matching document to evaluate it.
-      // On the prod policy collection that made search's count scan cost ~1ms
-      // per index entry (34-71s) instead of running index-only.
-      //
-      // Negation operators and null equality do match absent fields, so the
-      // guard stays whenever the filter itself could match a tombstone.
+      // holding only _id/_version after a delete. It is only *required* when
+      // the filter could itself match one: negation operators and null
+      // equality match absent fields, plain equality and $in do not.
       const needsStateGuard = !hasFilter || canMatchMissing(params.filter);
 
-      const filterArray: any[] = [];
-      if (filterParams) filterArray.push(filterParams);
-      if (needsStateGuard) filterArray.push({ _state: { $exists: true } });
+      const stateGuard = { _state: { $exists: true } };
+      const base: any[] = [];
+      if (filterParams) base.push(filterParams);
 
-      const filter: any =
-        filterArray.length > 1 ? { $and: filterArray } : filterArray[0] ?? {};
+      const combine = (conditions: any[]): any =>
+        conditions.length > 1 ? { $and: conditions } : conditions[0] ?? {};
+
+      // The count omits the guard wherever correctness allows. No _state.*
+      // index can answer $exists on _state, so including it costs a document
+      // fetch per index entry (IXSCAN, ~670us each) instead of a covered scan
+      // (IXONLYSCAN, ~1us each) — 39.6s versus 87ms on the prod policy
+      // collection, for the same 58k rows.
+      const countFilter = combine(needsStateGuard ? [...base, stateGuard] : base);
+
+      // The find always keeps it. Here it is a no-op for correctness and acts
+      // purely on plan selection: without it the planner abandons the _id_
+      // index and instead scans every match, then blocking-SORTs the lot to
+      // satisfy the sort before discarding all but one page — 30.7s to return
+      // 10 rows. With it, the scan streams in _id order and stops at the
+      // limit. Steering the plan through a redundant predicate is fragile; a
+      // hint on the sort field's index is the durable fix, but it has to be
+      // conditional (a selective filter is better served by its own index)
+      // and that needs explain output before it can be trusted.
+      const findFilter = combine([...base, stateGuard]);
 
       let options: FindOptions = {};
       if (params.pagination) {
@@ -208,8 +220,8 @@ export function build<AggregateShape>(
 
         options.sort = [field, order.toLowerCase()];
       }
-      const total = await collection().countDocuments(filter);
-      const results = await collection().find(filter, options).toArray();
+      const total = await collection().countDocuments(countFilter);
+      const results = await collection().find(findFilter, options).toArray();
 
       return {
         data: results.map(parseResult),
