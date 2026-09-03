@@ -194,15 +194,24 @@ export function build<AggregateShape>(
       // collection, for the same 58k rows.
       const countFilter = combine(needsStateGuard ? [...base, stateGuard] : base);
 
-      // The find always keeps it. Here it is a no-op for correctness and acts
-      // purely on plan selection: without it the planner abandons the _id_
-      // index and instead scans every match, then blocking-SORTs the lot to
-      // satisfy the sort before discarding all but one page — 30.7s to return
-      // 10 rows. With it, the scan streams in _id order and stops at the
-      // limit. Steering the plan through a redundant predicate is fragile; a
-      // hint on the sort field's index is the durable fix, but it has to be
-      // conditional (a selective filter is better served by its own index)
-      // and that needs explain output before it can be trusted.
+      // The find always keeps it, and must. Several _state.* indexes are
+      // partial on exactly `{ _state: { $exists: true } }`, and DocumentDB
+      // only considers a partial index when the query carries a predicate
+      // satisfying that filter. Drop the guard and every one of them becomes
+      // ineligible, so a sort on a partially-indexed field loses its stream
+      // and falls back to scanning all matches into a blocking SORT.
+      //
+      // Measured on prod policy, filtering status and sorting createdAt:
+      //   without the guard: 43/43 finds took LIMIT_SKIP->SORT->IXSCAN on an
+      //     unrelated index, 262ms-57.6s, never once touching
+      //     _state.createdAt_-1
+      //   with the guard: LIMIT_SKIP->IXSCAN on _state.createdAt_-1, no SORT
+      //     stage, 69-124ms
+      //
+      // So this is load-bearing, not redundancy to be tidied away, and it is
+      // not a plan hint — a hint on the sort index would not restore
+      // eligibility. Any new index meant to serve a sort should be created
+      // non-partial, so it does not depend on this predicate surviving.
       const findFilter = combine([...base, stateGuard]);
 
       let options: FindOptions = {};
