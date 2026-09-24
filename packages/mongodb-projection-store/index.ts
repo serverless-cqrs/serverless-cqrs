@@ -210,8 +210,23 @@ export function build<AggregateShape>(
       //
       // So this is load-bearing, not redundancy to be tidied away, and it is
       // not a plan hint — a hint on the sort index would not restore
-      // eligibility. Any new index meant to serve a sort should be created
-      // non-partial, so it does not depend on this predicate surviving.
+      // eligibility.
+      //
+      // The guard and the partial filter are a pair. An index whose
+      // partialFilterExpression is exactly this predicate proves it for every
+      // entry it holds, so the planner can stream that index without fetching
+      // each document to re-check $exists — nothing in a _state.* index can
+      // answer it. A new index meant to serve a sort therefore wants to be
+      // PARTIAL on this same expression; non-partial is NOT the safe default.
+      // A cluster migration on 2026-09-22 recreated _state.createdAt_-1
+      // without the partial filter, and this query — guard still present,
+      // index still present — went from 69-124ms to 4.8-67s, the planner
+      // abandoning it to blocking-sort all 61,459 matches instead.
+      //
+      // The count is the mirror image: countFilter omits the guard, so an
+      // index serving it must be non-partial to be eligible at all
+      // (_state.status_1, ~173ms via IXONLYSCAN). Different filters, different
+      // indexes, both satisfied.
       const findFilter = combine([...base, stateGuard]);
 
       let options: FindOptions = {};
