@@ -1,6 +1,7 @@
 import {
   repositoryBuilder,
   queryServiceBuilder,
+  rebuildServiceBuilder,
   refreshServiceBuilder,
 } from "@serverless-cqrs/read-model";
 
@@ -36,9 +37,15 @@ export function build<AggregateShape, EventShape>({
 
   // next let's initialize the refresh service.
   // we'll use this to load any new events
-  // like if we make a schema change and we need to rebuild all projections
-  // or if a query asks for strong consistency.
+  // like if a query asks for strong consistency.
   const refreshService = refreshServiceBuilder.build({
+    repository,
+    eventStore,
+  });
+
+  // the rebuild service reconstructs projections from scratch,
+  // like if we make a schema change and we need to rebuild all projections.
+  const rebuildService = rebuildServiceBuilder.build({
     repository,
     eventStore,
   });
@@ -51,6 +58,7 @@ export function build<AggregateShape, EventShape>({
 
   return {
     ...refreshService,
+    ...rebuildService,
     ...queryService,
   };
 }

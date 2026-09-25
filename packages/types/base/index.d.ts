@@ -13,9 +13,15 @@ export interface Commit<EventShape> {
   version: number;
 }
 
-export interface VersionLock {
-  lastCommitId?: string;
-  version?: number;
+// An opaque, JSON-serializable slice of the event stream. It's produced by
+// EventStore.listPartitions and handed back, unmodified, to EventStore.scanPartition,
+// possibly by a different process (e.g. a worker in a fan-out).
+export type Partition = unknown;
+
+// An entity a rebuild couldn't write, and why. Retry these by id.
+export interface FailedEntity {
+  entityId: ID;
+  reason: string;
 }
 
 export type Reducer<StateShape, EventShape> = (

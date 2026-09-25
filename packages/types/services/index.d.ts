@@ -1,4 +1,4 @@
-import { Commit, ID } from "../base";
+import { Commit, FailedEntity, ID, Partition } from "../base";
 
 export interface EventService<EventShape> {
   handleEvent: (commit: Commit<EventShape>) => Promise<void>;
@@ -30,9 +30,53 @@ export interface QueryServiceSearchResults<ProjectionShape> {
 export interface RefreshService<EventShape> {
   applyEvents: (commit: Commit<EventShape>) => Promise<void>;
   getAggregateEvents: (aggregateId: string) => Promise<EventShape[]>;
-  refresh: (options?: { reset?: boolean }) => Promise<void>;
+  // apply every commit after the checkpoint on top of the existing projections.
+  refresh: () => Promise<void>;
+}
+
+export interface RebuildPlan {
+  // the commit to set the checkpoint to once every partition has been rebuilt.
+  // undefined if the event store is empty.
+  checkpoint?: string;
+  partitions: Partition[];
+}
+
+export interface RebuildResult {
+  rebuilt: number;
+  failed: FailedEntity[];
+}
+
+// Rebuilds projections from scratch. Every method except rebuild() is one step of a
+// fan-out, sized to run in a single worker, with JSON-serializable input and output:
+//
+//   planRebuild → (wait) → rebuildPartition for each partition, in parallel
+//     → rebuildEntities for any failed ids → finalizeRebuild → refresh
+//
+// Rebuilding is idempotent, so any step can be retried.
+export interface RebuildService {
+  // optionally wipe the projection store, then capture the checkpoint and split the
+  // event stream into partitions. Wait a while (see settleMs on rebuild) before
+  // scanning, so commits that were in flight when the checkpoint was read have landed.
+  planRebuild: (options: {
+    targetPartitionSize: number;
+    reset?: boolean;
+  }) => Promise<RebuildPlan>;
+  rebuildPartition: (options: { partition: Partition }) => Promise<RebuildResult>;
+  rebuildEntities: (options: { ids: ID[] }) => Promise<RebuildResult>;
+  // set the checkpoint from the plan. Call it only once nothing has failed, then refresh.
+  finalizeRebuild: (options: { checkpoint?: string }) => Promise<void>;
+  // run every step in this process with bounded concurrency. It stops before
+  // finalizing if any entity failed, and returns the checkpoint so you can retry the
+  // failures with rebuildEntities and then call finalizeRebuild yourself.
+  rebuild: (options?: {
+    targetPartitionSize?: number;
+    concurrency?: number;
+    reset?: boolean;
+    settleMs?: number;
+  }) => Promise<RebuildResult & { checkpoint?: string }>;
 }
 
 export interface ReadModel<AggregateShape, EventShape>
   extends RefreshService<EventShape>,
+    RebuildService,
     QueryService<AggregateShape> {}

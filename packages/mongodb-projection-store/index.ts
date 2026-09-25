@@ -1,4 +1,4 @@
-import { ProjectionStore, VersionLock } from "@serverless-cqrs/types";
+import { ID, ProjectionStore } from "@serverless-cqrs/types";
 import { MongoClient, MongoClientOptions, FindOptions } from "mongodb";
 
 const clients: {
@@ -89,6 +89,15 @@ const parseResult = <AggregateShape>({
   state: _state,
 });
 
+// the checkpoint lives in the "versionLock" collection under _state, where the
+// old version lock kept lastCommitId, so existing checkpoints carry over.
+interface Checkpoint {
+  _id: string;
+  _state?: string;
+}
+
+const DUPLICATE_KEY = 11000;
+
 interface BuildParams {
   entityName: string;
 }
@@ -101,7 +110,7 @@ export function build<AggregateShape>(
   // wrappers, no I/O) so that operations always go through the client cache —
   // if a poisoned client was evicted, the next operation gets a fresh one.
   const collection = () => getDb(config).collection<Result<AggregateShape>>(entityName);
-  const versionLock = () => getDb(config).collection<Result<string>>("versionLock");
+  const versionLock = () => getDb(config).collection<Checkpoint>("versionLock");
 
   return {
     set: async ({ id, version, state }) => {
@@ -122,23 +131,18 @@ export function build<AggregateShape>(
       await getDb(config).dropCollection(entityName);
     },
 
-    setVersionLock: async ({
-      version,
-      lastCommitId,
-    }: Required<VersionLock>) => {
+    setCheckpoint: async (commitId) => {
       await versionLock().replaceOne(
-        { _id: entityName, _version: { $lt: version } },
-        { _version: version, _state: lastCommitId },
+        { _id: entityName },
+        { _state: commitId },
         { upsert: true }
       );
     },
-    getVersionLock: async () => {
-      // use readPreference primary to ensure we always read the latest version lock, even if we're connected to a replica set
-      // because we process commits sequentially, we can be sure that if the version lock is updated, it will be available on the primary by the time we read it
+    getCheckpoint: async () => {
+      // use readPreference primary to ensure we always read the latest checkpoint, even if we're connected to a replica set
+      // because we process commits sequentially, we can be sure that if the checkpoint is updated, it will be available on the primary by the time we read it
       const res = await versionLock().findOne({ _id: entityName }, { readPreference: "primary"});
-      if (!res) return;
-
-      return { lastCommitId: res._state, version: res._version };
+      return res?._state;
     },
     batchGet: async (ids) => {
       const res = await collection()
@@ -151,19 +155,38 @@ export function build<AggregateShape>(
 
       return res.map(parseResult);
     },
-    batchWrite: async (obj) => {
-      const params = Object.keys(obj).map((id) => {
+    batchWrite: async (obj, { overwriteSameVersion = false } = {}) => {
+      const ids = Object.keys(obj);
+      if (ids.length === 0) return { conflicts: [] };
+
+      const params = ids.map((id) => {
         const { version, state } = obj[id];
           return {
             replaceOne: {
-              filter: { _id: id, _version: { $lt: version } },
+              filter: {
+                _id: id,
+                _version: overwriteSameVersion ? { $lte: version } : { $lt: version },
+              },
               replacement: { _id: id, _version: version, ...(state && { _state: state }) },
               upsert: true,
             },
           };
       });
 
-      await collection().bulkWrite(params);
+      // when the stored version is too new, the filter misses and the upsert tries to insert
+      // a second document with the same _id, which fails with a duplicate key error. Those
+      // are the conflicts. ordered: false keeps going past them to write the rest.
+      try {
+        await collection().bulkWrite(params, { ordered: false });
+        return { conflicts: [] };
+      } catch (err: any) {
+        if (!err?.writeErrors) throw err;
+
+        const writeErrors = [].concat(err.writeErrors) as { code: number; index: number }[];
+        if (writeErrors.some((e) => e.code !== DUPLICATE_KEY)) throw err;
+
+        return { conflicts: writeErrors.map((e) => ids[e.index]) as ID[] };
+      }
     },
     search: async (params) => {
       if (params.rawSearch) throw new Error("rawSearchNotSupported");

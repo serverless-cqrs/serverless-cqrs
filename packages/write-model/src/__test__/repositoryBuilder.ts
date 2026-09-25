@@ -10,7 +10,11 @@ const commits: Commit<TestShape>[] = [];
 const eventStore: EventStore<TestShape> = {
   loadEvents: (_id: string) =>
     Promise.resolve([{ foo: "bar" }, { bar: "foo" }, { foo: "baz" }]),
+  loadCommits: async () => [],
   listCommits: async () => commits,
+  getLatestCommitId: async () => undefined,
+  listPartitions: async () => [],
+  scanPartition: async function* () {},
   append: async (entityId, version, events) => {
     commits.push({
       entityId,

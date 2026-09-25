@@ -9,12 +9,19 @@ const capturedFilters: any[] = [];
 class MockCollection {
   private data: Map<string, any> = new Map();
 
+  // true if the filter's version constraint excludes the stored document
+  isStale(filter: any, currentDoc: any) {
+    if (!currentDoc || !filter._version) return false;
+    if ("$lte" in filter._version) return currentDoc._version > filter._version.$lte;
+    return currentDoc._version >= filter._version.$lt;
+  }
+
   async replaceOne(filter: any, replacement: any, _options?: any) {
     const id = filter._id;
     const currentDoc = this.data.get(id);
     
     // Check version constraint
-    if (currentDoc && filter._version && currentDoc._version >= filter._version.$lt) {
+    if (this.isStale(filter, currentDoc)) {
       return { matchedCount: 0 };
     }
     
@@ -102,16 +109,27 @@ class MockCollection {
     return { deletedCount: 0 };
   }
 
-  async bulkWrite(operations: any[]) {
-    for (const op of operations) {
-      if (op.replaceOne) {
-        await this.replaceOne(
-          op.replaceOne.filter,
-          op.replaceOne.replacement,
-          { upsert: op.replaceOne.upsert }
-        );
+  async bulkWrite(operations: any[], options?: { ordered?: boolean }) {
+    const writeErrors = [] as { index: number; code: number }[];
+
+    for (const [index, op] of operations.entries()) {
+      if (!op.replaceOne) continue;
+      const { filter, replacement, upsert } = op.replaceOne;
+
+      // like MongoDB: when the filter misses an existing document, the upsert
+      // tries to insert a second one with the same _id and fails
+      if (upsert && this.isStale(filter, this.data.get(filter._id))) {
+        writeErrors.push({ index, code: 11000 });
+        if (options?.ordered !== false) break;
+        continue;
       }
+
+      await this.replaceOne(filter, replacement, { upsert });
     }
+
+    if (writeErrors.length > 0)
+      throw Object.assign(new Error("E11000 duplicate key error"), { writeErrors });
+
     return { ok: 1 };
   }
 
@@ -161,6 +179,29 @@ class MockMongoClient {
     for (const listener of this.listeners[event] ?? []) listener();
   }
 }
+
+// builds an adapter on a db the test can reach into, to seed or patch collections
+const buildWithDb = async (assert: any) => {
+  const db = new MockDb();
+  class SharedDbClient extends MockMongoClient {
+    db(_dbName: string) {
+      return db;
+    }
+  }
+
+  const storage = await assert.mockRequire("../index", {
+    mongodb: {
+      MongoClient: SharedDbClient,
+    },
+  });
+
+  const adapter = storage.build(
+    { entityName: "foo" },
+    { uri: "mongodb://localhost", database: "test" }
+  );
+
+  return { adapter, db };
+};
 
 test("flattenQuery - simple object", async (assert) => {
   const input = { a: 1, b: 2 };
@@ -300,84 +341,32 @@ test("get - non-existent", async (assert) => {
   assert.equal(result, undefined, "returns undefined for non-existent id");
 });
 
-test("setVersionLock", async (assert) => {
-  const storage = await assert.mockRequire("../index", {
-    mongodb: {
-      MongoClient: MockMongoClient,
-    },
-  });
-  
-  const adapter = storage.build(
-    { entityName: "foo" },
-    { uri: "mongodb://localhost", database: "test" }
-  );
+test("setCheckpoint", async (assert) => {
+  const { adapter } = await buildWithDb(assert);
 
-  await adapter.setVersionLock({
-    version: 5,
-    lastCommitId: "commit123",
-  });
+  await adapter.setCheckpoint("commit123");
+  assert.equal(await adapter.getCheckpoint(), "commit123", "sets the checkpoint");
 
-  const result = await adapter.getVersionLock();
-  const expected = {
-    version: 5,
-    lastCommitId: "commit123",
-  };
-
-  assert.same(result, expected, "sets versionLock in store");
+  await adapter.setCheckpoint("commit100");
+  assert.equal(await adapter.getCheckpoint(), "commit100", "can move the checkpoint back");
 });
 
-test("setVersionLock - version constraint", async (assert) => {
-  const storage = await assert.mockRequire("../index", {
-    mongodb: {
-      MongoClient: MockMongoClient,
-    },
-  });
-  
-  const adapter = storage.build(
-    { entityName: "foo" },
-    { uri: "mongodb://localhost", database: "test" }
+test("getCheckpoint", async (assert) => {
+  const { adapter, db } = await buildWithDb(assert);
+
+  assert.equal(await adapter.getCheckpoint(), undefined, "undefined when none is set");
+
+  // a document written by the old setVersionLock
+  await db.collection("versionLock").replaceOne(
+    { _id: "foo" },
+    { _version: 5, _state: "commit123" }
   );
 
-  await adapter.setVersionLock({
-    version: 5,
-    lastCommitId: "commit123",
-  });
-
-  // Try to set with lower version
-  await adapter.setVersionLock({
-    version: 3,
-    lastCommitId: "commit456",
-  });
-
-  const result = await adapter.getVersionLock();
-  assert.equal(result?.version, 5, "doesn't update with lower version");
-  assert.equal(result?.lastCommitId, "commit123", "commit ID unchanged");
-});
-
-test("getVersionLock", async (assert) => {
-  const storage = await assert.mockRequire("../index", {
-    mongodb: {
-      MongoClient: MockMongoClient,
-    },
-  });
-  
-  const adapter = storage.build(
-    { entityName: "foo" },
-    { uri: "mongodb://localhost", database: "test" }
+  assert.equal(
+    await adapter.getCheckpoint(),
+    "commit123",
+    "reads the lastCommitId saved by the old version lock"
   );
-
-  await adapter.setVersionLock({
-    version: 0,
-    lastCommitId: "123",
-  });
-
-  const result = await adapter.getVersionLock();
-  const expected = {
-    version: 0,
-    lastCommitId: "123",
-  };
-
-  assert.same(result, expected, "returns existing versionLock from store");
 });
 
 test("batchGet", async (assert) => {
@@ -459,6 +448,50 @@ test("batchWrite", async (assert) => {
 
   assert.same(result1, { id: "123", version: 0, state: { foo: "bar" } }, "writes first projection");
   assert.same(result2, { id: "789", version: 3, state: { baz: "qux" } }, "writes second projection");
+});
+
+test("batchWrite - conflicts", async (assert) => {
+  const { adapter } = await buildWithDb(assert);
+
+  await adapter.set({ id: "123", version: 2, state: { foo: "old" } });
+  await adapter.set({ id: "456", version: 5, state: { foo: "newer" } });
+
+  const strict = await adapter.batchWrite({
+    "123": { version: 2, state: { foo: "rebuilt" } },
+    "789": { version: 1, state: { foo: "new" } },
+  });
+  assert.same(strict, { conflicts: ["123"] }, "rejects the same version by default");
+  assert.same((await adapter.get("123")).state, { foo: "old" }, "keeps the stored projection");
+  assert.same((await adapter.get("789")).state, { foo: "new" }, "still writes the rest of the batch");
+
+  const overwrite = await adapter.batchWrite(
+    {
+      "456": { version: 4, state: { foo: "stale" } },
+      "123": { version: 2, state: { foo: "rebuilt" } },
+    },
+    { overwriteSameVersion: true }
+  );
+  assert.same(overwrite, { conflicts: ["456"] }, "rejects only older versions");
+  assert.same((await adapter.get("123")).state, { foo: "rebuilt" }, "overwrites the same version");
+  assert.same((await adapter.get("456")).state, { foo: "newer" }, "keeps the newer projection");
+
+  assert.same(await adapter.batchWrite({}), { conflicts: [] }, "skips an empty batch");
+});
+
+test("batchWrite - other write errors", async (assert) => {
+  const { adapter, db } = await buildWithDb(assert);
+
+  db.collection("foo").bulkWrite = async () => {
+    throw Object.assign(new Error("Document failed validation"), {
+      writeErrors: [{ index: 0, code: 121 }],
+    });
+  };
+
+  await assert.rejects(
+    adapter.batchWrite({ "123": { version: 1, state: { foo: "bar" } } }),
+    /Document failed validation/,
+    "rethrows anything that isn't a version conflict"
+  );
 });
 
 test("search - filter", async (assert) => {
@@ -727,18 +760,15 @@ test("reset", async (assert) => {
     state: { foo: "bar" },
   });
 
-  await adapter.setVersionLock({
-    version: 5,
-    lastCommitId: "commit123",
-  });
+  await adapter.setCheckpoint("commit123");
 
   await adapter.reset();
 
   const result = await adapter.get("123");
-  const versionLock = await adapter.getVersionLock();
+  const checkpoint = await adapter.getCheckpoint();
 
   assert.equal(result, undefined, "clears projections after reset");
-  assert.equal(versionLock, undefined, "clears version lock after reset");
+  assert.equal(checkpoint, undefined, "clears the checkpoint after reset");
 });
 
 test("topologyClosed - evicts client and next operation builds a fresh one", async (assert) => {

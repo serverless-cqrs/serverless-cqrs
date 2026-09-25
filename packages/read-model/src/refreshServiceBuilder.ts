@@ -1,13 +1,13 @@
 /*
-  A refresh handler is for rebuilding your readmodel by replaying events to your repository
-  it gets injected with an event adapter (where it loads events from) and a projection repo (where it writes the rebuilt entities)
+  A refresh service brings your read model up to date by pulling new commits from the event store
+  and applying them on top of your existing projections. It resumes from the checkpoint (the last
+  commit it applied) stored in the projection store, and moves the checkpoint forward after each batch.
 
-  The event repo must implement an iterator method which we can loop through to get batches of records
-  for each group of events, the refresh method attempts to load any existing projections and the apply those events.
-
-  Events must be applied consecutively. i.e. if an existing projection record exists, it's version number (the number events 
+  Events must be applied consecutively. i.e. if an existing projection record exists, it's version number (the number events
   used to derive the current state) must be the same as the version number of the event we want to apply (the number of preceding events)
-  if they don't match, we don't throw an error, just ignore that event. 
+  if the projection is already past that commit, we skip it. If it's behind, events are missing and we throw.
+
+  To reconstruct projections from scratch, use the rebuild service instead.
 */
 
 import {
@@ -15,42 +15,6 @@ import {
   ReadModelRepository,
   RefreshService,
 } from "@serverless-cqrs/types";
-
-// function sanitizeCommits<AggregateShape, EventShape>(
-//   groupedCommits: CommitsById<EventShape>,
-//   projections: Projection<AggregateShape>[]
-// ) {
-//   // we look at the version of the projection (which counts events used to dervie the current state) and compare it to the
-//   // vesion of the the event (which counts all previous events). Those version numbers should match. If they don't, it means that we
-//   // are either missing an event, or we already applied this one.
-//   // if the projection has a HIGHER version number it means we already applied this commit, so we can safely ignore it.
-//   // if the projection has a LOWER version number, it means that we're missing some commits and our store is inconsistent, so we throw.
-
-//   const projectionsById = projections.reduce(
-//     (p, c) => ({
-//       ...p,
-//       [c.id]: c,
-//     }),
-//     {} as ProjectionsById<AggregateShape>
-//   );
-
-//   return Object.keys(groupedCommits).reduce((pre, id) => {
-//     const [commit] = groupedCommits[id]; // get the first commit
-//     const record = projectionsById[id] || { version: 0 };
-
-//     if (record.version > commit.version) return pre; // skip if we already applied this version
-
-//     if (record.version < commit.version) {
-//       console.error(JSON.stringify({ record, commit }, null, 2));
-//       throw "missingVersions"; // throw if we're missing a version
-//     }
-
-//     return {
-//       ...pre,
-//       [id]: groupedCommits[id],
-//     };
-//   }, {} as CommitsById<EventShape>);
-// }
 
 export function build<AggregateShape, EventShape>({
   repository,
@@ -67,14 +31,11 @@ export function build<AggregateShape, EventShape>({
     getAggregateEvents: async (aggregateId: string) => {
       return eventStore.loadEvents(aggregateId);
     },
-    refresh: async ({ reset } = {}) => {
-      if (reset) await repository.reset();
-
+    refresh: async () => {
       while (true) {
         // load new commits
-        const versionLock = await repository.getVersionLock();
-        console.log('versionLock:', versionLock.version)
-        const commits = await eventStore.listCommits(versionLock.lastCommitId);
+        const checkpoint = await repository.getCheckpoint();
+        const commits = await eventStore.listCommits(checkpoint);
 
         if (commits.length == 0)
           // if there are no more commits to process, return
@@ -82,7 +43,7 @@ export function build<AggregateShape, EventShape>({
 
         await repository.applyCommits(commits);
 
-        await versionLock.save(commits);
+        await repository.setCheckpoint(commits[commits.length - 1].commitId);
 
         console.log("processed commits:", commits.length);
       }

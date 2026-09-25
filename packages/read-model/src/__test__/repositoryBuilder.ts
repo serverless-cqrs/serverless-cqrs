@@ -17,7 +17,7 @@ let projections: Record<string, any> = {
     },
   },
 };
-let versionLock = {};
+let checkpoint: string | undefined;
 
 const projectionStore = {
   reset: async () => {},
@@ -25,26 +25,31 @@ const projectionStore = {
   set: async (obj: any) => {
     projections[obj.id] = obj;
   },
-  getVersionLock: async () => ({
-    version: 2,
-    lastCommitId: "123",
-  }),
-  setVersionLock: async (lock: any) => {
-    versionLock = lock;
+  getCheckpoint: async () => checkpoint,
+  setCheckpoint: async (commitId: string) => {
+    checkpoint = commitId;
   },
   batchGet: async (ids: string[]) =>
-    ids.map((id) => ({
-      id,
-      version: 2,
-      state: {
-        foo: "bar",
-      },
-    })),
-  batchWrite: async (obj: Record<string, any>) => {
-    projections = {
-      ...projections,
-      ...obj,
-    };
+    ids.map((id) => projections[id]).filter((p) => !!p),
+  batchWrite: async (
+    obj: Record<string, any>,
+    { overwriteSameVersion = false } = {}
+  ) => {
+    const conflicts = [] as string[];
+    for (const id of Object.keys(obj)) {
+      const existing = projections[id];
+      if (
+        existing &&
+        (overwriteSameVersion
+          ? existing.version > obj[id].version
+          : existing.version >= obj[id].version)
+      ) {
+        conflicts.push(id);
+        continue;
+      }
+      projections[id] = obj[id];
+    }
+    return { conflicts };
   },
   search: async (params: any) => params,
 };
@@ -57,37 +62,13 @@ const repo = build<ProjectionShape, EventShape>({
   reducer,
 });
 
-test("getVersionLock", async (assert) => {
-  const res = await repo.getVersionLock();
-  assert.same(res.version, 2, "returns the version");
+test("checkpoint", async (assert) => {
+  assert.same(await repo.getCheckpoint(), undefined, "undefined when none is set");
 
-  assert.same(res.lastCommitId, "123", "returns the lastCommitId");
+  await repo.setCheckpoint("456");
 
-  await res.save([{ commitId: "456" }]);
-
-  assert.same(
-    versionLock,
-    {
-      version: 3,
-      lastCommitId: "456",
-    },
-    "saves the last commit id and increments version"
-  );
-});
-
-test("getVersionLock - none", async (assert) => {
-  const repo = build({
-    projectionStore: {
-      ...projectionStore,
-      getVersionLock: async () => undefined,
-    },
-    reducer,
-  });
-
-  const res = await repo.getVersionLock();
-  assert.same(res.version, 0, "returns the default version");
-
-  assert.same(res.lastCommitId, undefined, "returns undefined lastCommitId ");
+  assert.same(checkpoint, "456", "saves the checkpoint to the store");
+  assert.same(await repo.getCheckpoint(), "456", "returns the saved checkpoint");
 });
 
 test("getById", async (assert) => {
@@ -283,5 +264,64 @@ test("applyCommits", async (assert) => {
     previousCopy,
     projections,
     "does nothing if the version has already been applied"
+  );
+});
+
+test("rebuild", async (assert) => {
+  const commitBase = {
+    entityName: "foo",
+    commitId: "123",
+    committedAt: 123,
+  };
+  const commit = (entityId: string, version: number, ...foos: string[]) => ({
+    ...commitBase,
+    entityId,
+    version,
+    events: foos.map((foo) => ({ foo })),
+  });
+
+  projections = {
+    "123": { id: "123", version: 3, state: { foo: "stale" } },
+    "999": { id: "999", version: 5, state: { foo: "newer" } },
+  };
+
+  const result = await repo.rebuild([
+    // out of order, as a store might return them
+    [commit("123", 1, "b", "c"), commit("123", 0, "a")],
+    [commit("456", 0, "x")],
+    [commit("789", 0, "a"), commit("789", 2, "c")],
+    [commit("999", 0, "old")],
+  ]);
+
+  assert.same(
+    projections["123"],
+    { id: "123", version: 3, state: { foo: "c" } },
+    "overwrites an existing projection at the same version"
+  );
+  assert.same(
+    projections["456"],
+    { id: "456", version: 1, state: { foo: "x" } },
+    "creates a new projection"
+  );
+  assert.notOk(projections["789"], "doesn't write an entity with missing versions");
+  assert.same(
+    projections["999"].state,
+    { foo: "newer" },
+    "doesn't regress a projection that's already further along"
+  );
+  assert.same(result.rebuilt, 2, "counts written projections");
+  assert.match(
+    result.failed,
+    [
+      { entityId: "789", reason: /versionMismatch/ },
+      { entityId: "999", reason: "conflict" },
+    ],
+    "reports version gaps and conflicts as failures"
+  );
+
+  assert.same(
+    await repo.rebuild([[]]),
+    { rebuilt: 0, failed: [] },
+    "ignores empty entities"
   );
 });

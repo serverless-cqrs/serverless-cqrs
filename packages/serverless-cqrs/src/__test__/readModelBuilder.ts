@@ -17,12 +17,22 @@ test("parseEvent", async (assert) => {
     "@serverless-cqrs/read-model": {
       repositoryBuilder: { build: build("repository") },
       queryServiceBuilder: { build: build("queryService") },
+      rebuildServiceBuilder: { build: build("rebuildService") },
       refreshServiceBuilder: { build: build("refreshService") },
     },
   });
 
   const expected = {
     refreshService: {
+      repository: {
+        repository: {
+          projectionStore,
+          reducer,
+        },
+      },
+      eventStore,
+    },
+    rebuildService: {
       repository: {
         repository: {
           projectionStore,

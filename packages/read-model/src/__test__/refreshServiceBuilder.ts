@@ -50,16 +50,17 @@ const eventStore: EventStore<string> = {
     );
     return results.reduce((p, c) => [...p, ...c.events], [] as string[]);
   },
+  loadCommits: async () => [],
   append: async () => {},
+  getLatestCommitId: async () => undefined,
+  listPartitions: async () => [],
+  scanPartition: async function* () {},
 };
 
 let appliedEvents: any[] = [];
 let appliedCommits: any[] = [];
 
-let versionLock = {
-  lastCommitId: "b",
-  version: 2,
-};
+let checkpoint = "b";
 
 const repository: ReadModelRepository<any, any> = {
   reset: async () => {},
@@ -71,15 +72,11 @@ const repository: ReadModelRepository<any, any> = {
   },
   getById: async () => undefined,
   getByIds: async () => [],
-  getVersionLock: async () => ({
-    ...versionLock,
-    save: async (commits) => {
-      versionLock = {
-        lastCommitId: commits[commits.length - 1].commitId,
-        version: versionLock.version + commits.length,
-      };
-    },
-  }),
+  rebuild: async () => ({ rebuilt: 0, failed: [] }),
+  getCheckpoint: async () => checkpoint,
+  setCheckpoint: async (commitId) => {
+    checkpoint = commitId;
+  },
   search: async () => ({
     data: [],
     total: 0,
@@ -114,16 +111,11 @@ test("getAggregateEvents", async (assert) => {
 });
 
 test("refresh", async (assert) => {
-  const expectedVersionLock = {
-    version: 4,
-    lastCommitId: "d",
-  };
-
   const expectedCommits = commits.slice(2);
   await refreshService.refresh();
 
   assert.same(appliedCommits, expectedCommits, "applies commits");
-  assert.same(versionLock, expectedVersionLock, "updated the versionLock");
+  assert.same(checkpoint, "d", "moves the checkpoint to the last commit");
 });
 
 // test("handles consecutive events", async (assert) => {

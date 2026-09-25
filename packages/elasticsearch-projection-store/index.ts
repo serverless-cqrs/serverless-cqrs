@@ -2,7 +2,6 @@ import makeSignedRequest, { HTTPError } from "./makeSignedRequest.js";
 import {
   ProjectionSearchParams,
   ProjectionStore,
-  VersionLock,
 } from "@serverless-cqrs/types";
 const camelToSnakeCase = (str: string) =>
   str.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`);
@@ -128,29 +127,22 @@ export function build<AggregateShape>(
       }
     },
 
-    setVersionLock: async ({ version, lastCommitId }: VersionLock) => {
+    setCheckpoint: async (lastCommitId) => {
       await makeSignedRequest({
         ...defaults,
         method: "PUT",
-        path: buildPath(
-          "version_lock",
-          "_doc",
-          index + "?refresh=wait_for&version_type=external&version=" + version
-        ),
+        path: buildPath("version_lock", "_doc", index + "?refresh=wait_for"),
         body: JSON.stringify({ lastCommitId }),
       });
     },
-    getVersionLock: async () => {
+    getCheckpoint: async () => {
       try {
         const { body } = await makeSignedRequest({
           ...defaults,
           path: buildPath("version_lock", "_doc", index),
         });
-        const { _source, _version } = parseJson(body);
-        return {
-          lastCommitId: _source.lastCommitId,
-          version: _version,
-        };
+        const { _source } = parseJson(body);
+        return _source.lastCommitId;
       } catch (e) {
         if (e instanceof HTTPError && e.response.statusCode == 404) return;
         throw e;
@@ -168,7 +160,7 @@ export function build<AggregateShape>(
       const found = data.docs.filter((r: any) => r.found);
       return found.map(_parseResult);
     },
-    batchWrite: async (obj) => {
+    batchWrite: async (obj, { overwriteSameVersion = false } = {}) => {
       const content = Object.keys(obj).reduce((p, id) => {
         const { version, state } = obj[id];
         if (!state)
@@ -187,14 +179,15 @@ export function build<AggregateShape>(
             index: {
               _id: id,
               version: version,
-              version_type: "external",
+              // external_gte also accepts a version equal to the stored one
+              version_type: overwriteSameVersion ? "external_gte" : "external",
             },
           },
           state,
         ];
       }, [] as any[]);
 
-      if (content.length == 0) return {};
+      if (content.length == 0) return { conflicts: [] };
 
       const { body } = await makeSignedRequest({
         ...defaults,
@@ -205,15 +198,15 @@ export function build<AggregateShape>(
 
       const data = parseJson(body);
 
-      return data.items.reduce((p: Record<string, any>, c: any) => {
-        const { _id, error } = c.index || c.delete;
-        if (!error) return p;
+      const conflicts = [] as string[];
+      for (const item of data.items) {
+        const { _id, status, error } = item.index || item.delete;
+        if (!error) continue;
+        if (status !== 409) throw new Error(JSON.stringify(error));
+        conflicts.push(_id);
+      }
 
-        return {
-          ...p,
-          [_id]: error,
-        };
-      }, {});
+      return { conflicts };
     },
     search: async (searchParams) => {
       const query = buildQueryFromSearchParams(searchParams);

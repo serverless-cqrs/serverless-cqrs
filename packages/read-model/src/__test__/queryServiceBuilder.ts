@@ -31,7 +31,9 @@ const repository: ReadModelRepository<any, any> = {
       },
     ],
   }),
-  getVersionLock: async () => ({ save: async () => {} }),
+  getCheckpoint: async () => undefined,
+  setCheckpoint: async () => {},
+  rebuild: async () => ({ rebuilt: 0, failed: [] }),
   applyEvents: async (_id, _events, _version) => {},
   applyCommits: async (_commits) => {},
 };

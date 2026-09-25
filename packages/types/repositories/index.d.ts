@@ -1,16 +1,18 @@
-import { ID, VersionLock, Projection, Commit, Aggregate } from "../base";
+import { ID, Projection, Commit, Aggregate, FailedEntity } from "../base";
 import { StorageSearchResults } from "../storage";
 
-export interface RepositoryVersionLock extends VersionLock {
-  save: (commits: { commitId: string }[]) => Promise<void>;
-}
-
 export interface ReadModelRepository<ProjectionShape, EventShape> {
-  getVersionLock: () => Promise<RepositoryVersionLock>;
+  getCheckpoint: () => Promise<string | undefined>;
+  setCheckpoint: (commitId: string) => Promise<void>;
   getById: (id: ID) => Promise<Projection<ProjectionShape> | undefined>;
   getByIds: (ids: ID[]) => Promise<Projection<ProjectionShape>[]>;
   applyEvents: (id: ID, events: EventShape[], version: number) => Promise<void>;
   applyCommits: (commits: Commit<EventShape>[]) => Promise<void>;
+  // reduce each entity from its complete commit history and overwrite its projection.
+  // Each element of `entities` is one entity's commits.
+  rebuild: (
+    entities: Commit<EventShape>[][]
+  ) => Promise<{ rebuilt: number; failed: FailedEntity[] }>;
   search: (params: any) => Promise<StorageSearchResults<ProjectionShape>>;
   reset: () => Promise<void>;
 }
