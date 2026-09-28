@@ -148,7 +148,7 @@ export function build<EventShape>(
           TableName: tableName,
           Segment: segment,
           TotalSegments: totalSegments,
-          ConsistentRead: true,
+          ConsistentRead: false,
           FilterExpression: "entityName = :entityName",
           ExpressionAttributeValues: {
             ":entityName": { S: entityName },

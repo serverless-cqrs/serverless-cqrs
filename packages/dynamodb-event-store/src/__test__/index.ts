@@ -202,7 +202,7 @@ test("scanPartition", async (assert) => {
       TableName: "fooTable",
       Segment: 2,
       TotalSegments: 8,
-      ConsistentRead: true,
+      ConsistentRead: false,
       FilterExpression: "entityName = :entityName",
       ExpressionAttributeValues: { ":entityName": { S: "foo" } },
     },
