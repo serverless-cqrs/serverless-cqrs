@@ -194,7 +194,7 @@ test("applyCommits", async (assert) => {
     committedAt: 123,
   };
 
-  await repo.applyCommits([
+  const applied = await repo.applyCommits([
     {
       ...commitBase,
       entityId: "123",
@@ -225,22 +225,47 @@ test("applyCommits", async (assert) => {
     expected,
     "applies commits to new and existing projections"
   );
+  assert.same(applied, { behind: [] }, "reports nothing behind");
 
-  assert.rejects(
-    () =>
-      repo.applyCommits([
+  const gap = await repo.applyCommits([
+    {
+      ...commitBase,
+      entityId: "123",
+      version: 4,
+      events: [
         {
-          ...commitBase,
-          entityId: "123",
-          version: 4,
-          events: [
-            {
-              foo: "baz",
-            },
-          ],
+          foo: "gap",
         },
-      ]),
-    "throws if there is a version missing"
+      ],
+    },
+    {
+      ...commitBase,
+      entityId: "123",
+      version: 5,
+      events: [
+        {
+          foo: "gap",
+        },
+      ],
+    },
+    {
+      ...commitBase,
+      entityId: "789",
+      version: 0,
+      events: [
+        {
+          foo: "new",
+        },
+      ],
+    },
+  ]);
+
+  assert.same(gap, { behind: ["123"] }, "reports an entity with a version missing");
+  assert.same(projections["123"], expected["123"], "leaves that entity alone");
+  assert.same(
+    projections["789"],
+    { id: "789", version: 1, state: { foo: "new" } },
+    "still applies the rest of the batch"
   );
 
   let previousCopy = { ...projections };

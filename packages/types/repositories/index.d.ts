@@ -7,7 +7,10 @@ export interface ReadModelRepository<ProjectionShape, EventShape> {
   getById: (id: ID) => Promise<Projection<ProjectionShape> | undefined>;
   getByIds: (ids: ID[]) => Promise<Projection<ProjectionShape>[]>;
   applyEvents: (id: ID, events: EventShape[], version: number) => Promise<void>;
-  applyCommits: (commits: Commit<EventShape>[]) => Promise<void>;
+  // apply commits on top of the existing projections. An entity whose projection is missing
+  // earlier commits can't be applied; it's skipped and returned in `behind`, and the rest of
+  // the batch is still written.
+  applyCommits: (commits: Commit<EventShape>[]) => Promise<{ behind: ID[] }>;
   // reduce each entity from its complete commit history and overwrite its projection.
   // Each element of `entities` is one entity's commits.
   rebuild: (

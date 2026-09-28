@@ -30,8 +30,17 @@ export interface QueryServiceSearchResults<ProjectionShape> {
 export interface RefreshService<EventShape> {
   applyEvents: (commit: Commit<EventShape>) => Promise<void>;
   getAggregateEvents: (aggregateId: string) => Promise<EventShape[]>;
-  // apply every commit after the checkpoint on top of the existing projections.
-  refresh: () => Promise<void>;
+  // apply every commit after the checkpoint on top of the existing projections, and move the
+  // checkpoint forward. An entity whose projection is missing earlier commits is rebuilt from
+  // its full history instead. If that fails too, it's returned in `failed` and the checkpoint
+  // still moves past it, so one broken entity can't hold up the rest.
+  //
+  // requireCheckpoint: do nothing if there's no checkpoint yet, rather than replaying the
+  // whole event store. Use it for background refreshes that might run during a rebuild with
+  // reset, which removes the checkpoint until the rebuild finishes.
+  refresh: (options?: {
+    requireCheckpoint?: boolean;
+  }) => Promise<{ failed: FailedEntity[] }>;
 }
 
 export interface RebuildPlan {
@@ -67,7 +76,8 @@ export interface RebuildService {
   finalizeRebuild: (options: { checkpoint?: string }) => Promise<void>;
   // run every step in this process with bounded concurrency. It stops before
   // finalizing if any entity failed, and returns the checkpoint so you can retry the
-  // failures with rebuildEntities and then call finalizeRebuild yourself.
+  // failures with rebuildEntities and then call finalizeRebuild yourself. Once finalized,
+  // `failed` holds any entities the closing refresh couldn't repair.
   rebuild: (options?: {
     targetPartitionSize?: number;
     concurrency?: number;

@@ -31,34 +31,12 @@ import {
   RebuildService,
 } from "@serverless-cqrs/types";
 import { build as buildRefreshService } from "./refreshServiceBuilder";
+import { mapWithConcurrency } from "./mapWithConcurrency";
 
 const DEFAULT_PARTITION_SIZE = 10000;
 const DEFAULT_CONCURRENCY = 10;
 const DEFAULT_SETTLE_MS = 5000;
 const DEFAULT_BATCH_SIZE = 100;
-
-// run `fn` over `items` with at most `limit` in flight at once.
-async function mapWithConcurrency<T, R>(
-  items: T[],
-  limit: number,
-  fn: (item: T) => Promise<R>
-) {
-  const results = new Array<R>(items.length);
-  let next = 0;
-
-  const worker = async () => {
-    while (next < items.length) {
-      const i = next++;
-      results[i] = await fn(items[i]);
-    }
-  };
-
-  await Promise.all(
-    Array.from({ length: Math.max(1, Math.min(limit, items.length)) }, worker)
-  );
-
-  return results;
-}
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -159,9 +137,9 @@ export function build<AggregateShape, EventShape>({
       if (failed.length > 0) return { rebuilt, failed, checkpoint };
 
       await finalizeRebuild({ checkpoint });
-      await refreshService.refresh();
+      const refreshed = await refreshService.refresh();
 
-      return { rebuilt, failed, checkpoint };
+      return { rebuilt, failed: refreshed.failed, checkpoint };
     },
   };
 }

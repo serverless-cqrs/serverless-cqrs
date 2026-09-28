@@ -35,7 +35,7 @@ const repository: ReadModelRepository<any, any> = {
   setCheckpoint: async () => {},
   rebuild: async () => ({ rebuilt: 0, failed: [] }),
   applyEvents: async (_id, _events, _version) => {},
-  applyCommits: async (_commits) => {},
+  applyCommits: async (_commits) => ({ behind: [] }),
 };
 
 const handler = build({

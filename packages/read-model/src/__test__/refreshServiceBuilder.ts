@@ -69,6 +69,7 @@ const repository: ReadModelRepository<any, any> = {
   },
   applyCommits: async (commits) => {
     appliedCommits.push(...commits);
+    return { behind: [] };
   },
   getById: async () => undefined,
   getByIds: async () => [],
@@ -116,6 +117,74 @@ test("refresh", async (assert) => {
 
   assert.same(appliedCommits, expectedCommits, "applies commits");
   assert.same(checkpoint, "d", "moves the checkpoint to the last commit");
+});
+
+test("refresh - rebuilds entities that are behind", async (assert) => {
+  let checkpoint: string | undefined = "b";
+  const rebuilt: any[] = [];
+
+  const { refresh } = build({
+    eventStore: {
+      ...eventStore,
+      loadCommits: async (id) => commits.filter((c) => c.entityId === id),
+    },
+    repository: {
+      ...repository,
+      getCheckpoint: async () => checkpoint,
+      setCheckpoint: async (commitId) => {
+        checkpoint = commitId;
+      },
+      // "123" is missing commits, and "456" can be applied
+      applyCommits: async () => ({ behind: ["123"] }),
+      rebuild: async (entities) => {
+        rebuilt.push(...entities);
+        return {
+          rebuilt: 0,
+          failed: [
+            { entityId: "123", reason: "versionMismatch" },
+            { entityId: "999", reason: "conflict" },
+          ],
+        };
+      },
+    },
+  });
+
+  const error = console.error;
+  console.error = () => {};
+  const result = await refresh();
+  console.error = error;
+
+  assert.same(
+    rebuilt,
+    [commits.filter((c) => c.entityId === "123")],
+    "rebuilds the entity from its full history"
+  );
+  assert.same(
+    result,
+    { failed: [{ entityId: "123", reason: "versionMismatch" }] },
+    "reports entities it couldn't rebuild, but not conflicts"
+  );
+  assert.same(checkpoint, "d", "still moves the checkpoint past them");
+});
+
+test("refresh - requireCheckpoint", async (assert) => {
+  let listed = false;
+
+  const { refresh } = build({
+    eventStore: {
+      ...eventStore,
+      listCommits: async () => {
+        listed = true;
+        return [];
+      },
+    },
+    repository: { ...repository, getCheckpoint: async () => undefined },
+  });
+
+  const result = await refresh({ requireCheckpoint: true });
+
+  assert.same(result, { failed: [] }, "returns without failures");
+  assert.notOk(listed, "doesn't replay the event store without a checkpoint");
 });
 
 // test("handles consecutive events", async (assert) => {

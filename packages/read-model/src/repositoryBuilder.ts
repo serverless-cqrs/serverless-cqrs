@@ -117,17 +117,25 @@ export function build<ProjectionShape, EventShape>({
     },
     applyCommits: async (commits) => {
       const projections = {} as { [index: ID]: Projection<ProjectionShape> };
-      const ids = commits.map(({ entityId}) => entityId);
+      const behind = new Set<ID>();
+      const ids = [...new Set(commits.map(({ entityId }) => entityId))];
       const values = await projectionStore.batchGet(ids);
 
       for (const { entityId, version, events } of commits) {
+        if (behind.has(entityId)) continue;
+
         const projection =
           projections[entityId] ||
           values.find((v) => v.id == entityId) ||
           emptyProjection<ProjectionShape>(entityId);
 
-        // if the commit version is higher than the projection version it means that there are events missing
-        if (projection.version < version) throw new Error("versionMismatch");
+        // if the commit version is higher than the projection version it means that there are events missing.
+        // Leave the entity out entirely; the caller can rebuild it from its full history.
+        if (projection.version < version) {
+          behind.add(entityId);
+          delete projections[entityId];
+          continue;
+        }
         // if the projection version is higher it means this events have already been applied, so skip
         if (projection.version > version) continue;
 
@@ -138,6 +146,8 @@ export function build<ProjectionShape, EventShape>({
       // commits, so there's nothing left to apply to them.
       if (Object.keys(projections).length > 0)
         await projectionStore.batchWrite(projections);
+
+      return { behind: [...behind] };
     },
     rebuild: async (entities) => {
       const projections = {} as { [index: ID]: Projection<ProjectionShape> };

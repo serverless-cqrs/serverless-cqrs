@@ -162,6 +162,26 @@ test("step by step, with commits landing during the rebuild", async (assert) => 
   assert.same(await store.getCheckpoint(), "08", "and moves the checkpoint");
 });
 
+test("refresh repairs an entity missing commits from before the checkpoint", async (assert) => {
+  const { store, eventStore, refresh, stateOf } = await setup({
+    // "a" never got its version 1 commit ("03"), which is behind the checkpoint
+    projections: {
+      a: { id: "a", version: 1, state: { events: ["a0"] } },
+      b: { id: "b", version: 3, state: { events: ["b0", "b1", "b2"] } },
+      c: { id: "c", version: 1, state: { events: ["c0"] } },
+    },
+    checkpoint: "05",
+  });
+  eventStore.foo.push(commit("a", 2, "07", ["a2"]));
+
+  const result = await refresh();
+
+  assert.same(result, { failed: [] }, "reports no failures");
+  assert.same(await stateOf("a"), { events: ["a0", "a1", "a2"] }, "rebuilds it from its full history");
+  assert.same(await stateOf("d"), { events: ["d0"] }, "still applies the rest");
+  assert.same(await store.getCheckpoint(), "07", "and moves the checkpoint");
+});
+
 test("rebuild - empty event store", async (assert) => {
   const { service, store } = await setup({ commits: [] });
 
