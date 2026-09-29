@@ -110,6 +110,19 @@ class MockCollection {
     return { deletedCount: 0 };
   }
 
+  // supports $set and $inc, matching on _id
+  async updateOne(filter: any, update: any, options?: { upsert?: boolean }) {
+    const current = this.data.get(filter._id);
+    if (!current && !options?.upsert) return { matchedCount: 0 };
+
+    const doc = { _id: filter._id, ...current, ...update.$set };
+    for (const [key, n] of Object.entries(update.$inc ?? {}))
+      doc[key] = (doc[key] ?? 0) + (n as number);
+
+    this.data.set(filter._id, doc);
+    return { matchedCount: current ? 1 : 0 };
+  }
+
   async indexes() {
     return [{ v: 2, key: { _id: 1 }, name: "_id_" }, ...this.indexSpecs];
   }
@@ -360,6 +373,27 @@ test("setCheckpoint", async (assert) => {
 
   await adapter.setCheckpoint("commit100");
   assert.equal(await adapter.getCheckpoint(), "commit100", "can move the checkpoint back");
+});
+
+test("setCheckpoint - keeps the old version lock working", async (assert) => {
+  const { adapter, db } = await buildWithDb(assert);
+  const lock = db.collection("versionLock");
+
+  await adapter.setCheckpoint("commit1");
+  assert.same(
+    await lock.findOne({ _id: "foo" }),
+    { _id: "foo", _state: "commit1", _version: 1 },
+    "starts a _version"
+  );
+
+  // a document written by the old setVersionLock
+  await lock.replaceOne({ _id: "foo" }, { _version: 7, _state: "commit2" });
+  await adapter.setCheckpoint("commit3");
+  assert.same(
+    await lock.findOne({ _id: "foo" }),
+    { _id: "foo", _state: "commit3", _version: 8 },
+    "increments the old version lock's _version, so its next save still matches"
+  );
 });
 
 test("getCheckpoint", async (assert) => {

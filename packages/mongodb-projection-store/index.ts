@@ -90,10 +90,14 @@ const parseResult = <AggregateShape>({
 });
 
 // the checkpoint lives in the "versionLock" collection under _state, where the
-// old version lock kept lastCommitId, so existing checkpoints carry over.
+// old version lock kept lastCommitId, so existing checkpoints carry over. _version
+// isn't read anymore, but every write still increments it: the old version lock only
+// saves over a lower _version, so without one, code from before checkpoints (after a
+// rollback, or old workers mid-deploy) would fail every save with a duplicate key.
 interface Checkpoint {
   _id: string;
   _state?: string;
+  _version?: number;
 }
 
 const DUPLICATE_KEY = 11000;
@@ -150,9 +154,9 @@ export function build<AggregateShape>(
     },
 
     setCheckpoint: async (commitId) => {
-      await versionLock().replaceOne(
+      await versionLock().updateOne(
         { _id: entityName },
-        { _state: commitId },
+        { $set: { _state: commitId }, $inc: { _version: 1 } },
         { upsert: true }
       );
     },
