@@ -8,6 +8,7 @@ const capturedFilters: any[] = [];
 // Mock MongoDB client and collections
 class MockCollection {
   private data: Map<string, any> = new Map();
+  private indexSpecs: any[] = [];
 
   // true if the filter's version constraint excludes the stored document
   isStale(filter: any, currentDoc: any) {
@@ -109,6 +110,15 @@ class MockCollection {
     return { deletedCount: 0 };
   }
 
+  async indexes() {
+    return [{ v: 2, key: { _id: 1 }, name: "_id_" }, ...this.indexSpecs];
+  }
+
+  async createIndexes(specs: any[]) {
+    this.indexSpecs.push(...specs);
+    return specs.map((s) => s.name);
+  }
+
   async bulkWrite(operations: any[], options?: { ordered?: boolean }) {
     const writeErrors = [] as { index: number; code: number }[];
 
@@ -137,9 +147,10 @@ class MockCollection {
     return path.split('.').reduce((current, key) => current?.[key], obj);
   }
 
-  // Helper for tests
+  // Helper for tests. Like a drop, it takes the indexes with it.
   clear() {
     this.data.clear();
+    this.indexSpecs = [];
   }
 }
 
@@ -769,6 +780,60 @@ test("reset", async (assert) => {
 
   assert.equal(result, undefined, "clears projections after reset");
   assert.equal(checkpoint, "commit123", "leaves the checkpoint alone");
+});
+
+test("reset - drops the collection and recreates its indexes", async (assert) => {
+  const { adapter, db } = await buildWithDb(assert);
+  const coll = db.collection("foo");
+
+  const index = {
+    v: 2,
+    key: { "_state.createdAt": -1 },
+    name: "_state.createdAt_-1",
+    partialFilterExpression: { _state: { $exists: true } },
+  };
+  await coll.createIndexes([index]);
+  await coll.replaceOne({ _id: "123" }, { _version: 1 });
+
+  const dropped: string[] = [];
+  const dropCollection = db.dropCollection.bind(db);
+  db.dropCollection = async (name: string) => {
+    dropped.push(name);
+    return dropCollection(name);
+  };
+
+  await adapter.reset();
+
+  assert.same(dropped, ["foo"], "drops the collection");
+  assert.notOk(await coll.findOne({ _id: "123" }), "which deletes every projection");
+  assert.same(
+    await coll.indexes(),
+    [{ v: 2, key: { _id: 1 }, name: "_id_" }, index],
+    "recreates the indexes it had, options included"
+  );
+});
+
+test("reset - only drops once it has the indexes", async (assert) => {
+  const { adapter, db } = await buildWithDb(assert);
+  const coll = db.collection("foo");
+
+  let dropped = false;
+  db.dropCollection = async () => {
+    dropped = true;
+    return true;
+  };
+
+  coll.indexes = async () => {
+    throw Object.assign(new Error("ns does not exist"), { code: 26 });
+  };
+  await adapter.reset();
+  assert.notOk(dropped, "does nothing when the collection doesn't exist");
+
+  coll.indexes = async () => {
+    throw Object.assign(new Error("not authorized"), { code: 13 });
+  };
+  await assert.rejects(adapter.reset(), /not authorized/, "throws when it can't list them");
+  assert.notOk(dropped, "without dropping the collection");
 });
 
 test("topologyClosed - evicts client and next operation builds a fresh one", async (assert) => {

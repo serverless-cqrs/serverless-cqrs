@@ -97,6 +97,7 @@ interface Checkpoint {
 }
 
 const DUPLICATE_KEY = 11000;
+const NAMESPACE_NOT_FOUND = 26;
 
 interface BuildParams {
   entityName: string;
@@ -127,7 +128,25 @@ export function build<AggregateShape>(
       return parseResult(res);
     },
     reset: async () => {
+      // dropping takes the same time however big the collection is, but it takes the
+      // indexes with it, including the _state.* ones search depends on. They aren't defined
+      // in code, so copy them off the collection first and recreate them after the drop.
+      // If this dies in between, they're gone, and a retry won't bring them back.
+      let indexes;
+      try {
+        indexes = await collection().indexes();
+      } catch (err: any) {
+        // the collection doesn't exist, so there's nothing to reset
+        if (err?.code === NAMESPACE_NOT_FOUND) return;
+        throw err;
+      }
+
       await getDb(config).dropCollection(entityName);
+
+      // the _id index comes back with the collection. createIndexes ignores the fields
+      // listIndexes adds, like v and ns.
+      const secondary = indexes.filter(({ name }) => name !== "_id_");
+      if (secondary.length > 0) await collection().createIndexes(secondary);
     },
 
     setCheckpoint: async (commitId) => {
