@@ -4,6 +4,7 @@ import { Commit, Projection } from "@serverless-cqrs/types";
 import { build } from "../rebuildServiceBuilder";
 import { build as buildRefreshService } from "../refreshServiceBuilder";
 import { build as buildRepository } from "../repositoryBuilder";
+import { REBUILDING, START_OF_STREAM } from "../checkpoints";
 
 interface State {
   events: string[];
@@ -183,10 +184,76 @@ test("refresh repairs an entity missing commits from before the checkpoint", asy
 });
 
 test("rebuild - empty event store", async (assert) => {
+  const { service, store, eventStore, refresh, stateOf } = await setup({ commits: [] });
+
+  const result = await service.rebuild({ reset: true, settleMs: 0 });
+
+  assert.same(
+    result,
+    { rebuilt: 0, failed: [], checkpoint: START_OF_STREAM },
+    "rebuilds nothing"
+  );
+  assert.same(await store.getCheckpoint(), START_OF_STREAM, "checkpoints the start of the stream");
+
+  eventStore.foo.push(commit("a", 0, "01", ["a0"]));
+
+  assert.same(await refresh(), { failed: [] }, "later refreshes aren't paused");
+  assert.same(await stateOf("a"), { events: ["a0"] }, "and pick up the commits that arrive");
+  assert.same(await store.getCheckpoint(), "01", "and move the checkpoint");
+});
+
+test("rebuild - reset pauses refreshes until it's finalized", async (assert) => {
+  const { service, store, eventStore, refresh, stateOf } = await setup({ checkpoint: "06" });
+
+  const plan = await service.planRebuild({ targetPartitionSize: 2, reset: true });
+  assert.equal(await store.getCheckpoint(), REBUILDING, "marks the rebuild in progress");
+
+  for (const partition of plan.partitions) await service.rebuildPartition({ partition });
+
+  // lands after the rebuild, so only the refresh picks it up
+  eventStore.foo.push(commit("e", 0, "07", ["e0"]));
+
+  const warn = console.warn;
+  console.warn = () => {};
+  const paused = await refresh();
+  console.warn = warn;
+
+  assert.same(paused, { failed: [], paused: true }, "a refresh during the rebuild pauses");
+  assert.notOk(await store.get("e"), "and applies nothing");
+
+  await service.finalizeRebuild({ checkpoint: plan.checkpoint });
+
+  assert.same(await refresh(), { failed: [] }, "refreshes resume once it's finalized");
+  assert.same(await stateOf("e"), { events: ["e0"] }, "and catch up");
+});
+
+test("finalizeRebuild - without a checkpoint", async (assert) => {
   const { service, store } = await setup({ commits: [] });
 
-  const result = await service.rebuild({ settleMs: 0 });
+  await service.planRebuild({ targetPartitionSize: 2, reset: true });
+  // e.g. an untyped caller, or a plan whose JSON dropped the field
+  await service.finalizeRebuild({ checkpoint: undefined as any });
 
-  assert.same(result, { rebuilt: 0, failed: [], checkpoint: undefined }, "does nothing");
-  assert.same(await store.getCheckpoint(), undefined, "leaves no checkpoint");
+  assert.equal(await store.getCheckpoint(), START_OF_STREAM, "checkpoints the start of the stream");
+});
+
+test("rebuild - reset with failures leaves refreshes paused", async (assert) => {
+  // "b" is missing version 2
+  const commits = history().filter((c) => c.commitId !== "05");
+  commits.push(commit("b", 3, "07", ["b3"]));
+
+  const { service, store } = await setup({ commits, checkpoint: "01" });
+
+  const result = await service.rebuild({ reset: true, settleMs: 0 });
+
+  assert.equal(result.failed.length, 1, "reports the failed entity");
+  assert.equal(await store.getCheckpoint(), REBUILDING, "keeps refreshes paused");
+});
+
+test("refresh without a checkpoint replays the whole stream", async (assert) => {
+  const { store, refresh, stateOf } = await setup();
+
+  assert.same(await refresh(), { failed: [] }, "a new read model doesn't need a rebuild");
+  assert.same(await stateOf("b"), { events: ["b0", "b1", "b2"] }, "applies every commit");
+  assert.same(await store.getCheckpoint(), "06", "and sets the checkpoint");
 });

@@ -768,7 +768,7 @@ test("reset", async (assert) => {
   const checkpoint = await adapter.getCheckpoint();
 
   assert.equal(result, undefined, "clears projections after reset");
-  assert.equal(checkpoint, undefined, "clears the checkpoint after reset");
+  assert.equal(checkpoint, "commit123", "leaves the checkpoint alone");
 });
 
 test("topologyClosed - evicts client and next operation builds a fresh one", async (assert) => {

@@ -5,8 +5,9 @@
 
   The steps, each small enough for one worker, with JSON-serializable input and output:
 
-  1. planRebuild: optionally wipe the projection store, capture the latest commitId as the checkpoint,
-     and ask the event store to split the stream into partitions. No entity spans two partitions.
+  1. planRebuild: capture the latest commitId as the checkpoint (or the start of the stream, if the
+     event store is empty), ask the event store to split the stream into partitions, and optionally
+     wipe the projection store. No entity spans two partitions.
   2. wait: commits that were in flight when the checkpoint was read can still land with a lower
      commitId. Waiting before scanning gives them time to land so the scan picks them up.
   3. rebuildPartition, for each partition in parallel. Entities that can't be rebuilt (a reducer
@@ -16,8 +17,10 @@
      committed since. Re-applying a commit a projection already includes is a no-op, so the overlap
      between the rebuild and the refresh is safe.
 
-  Pause any scheduled refresh while a rebuild runs. After a reset there's no checkpoint, so a refresh
-  would replay the whole stream alongside the rebuild.
+  A rebuild with reset pauses refreshes until it's finalized: before wiping the projections, planRebuild
+  replaces the checkpoint with a marker that refresh recognizes, and finalizeRebuild replaces the marker.
+  If the rebuild is abandoned, refreshes stay paused (and log a warning) until another rebuild is
+  finalized. Without reset, refreshes keep running alongside the rebuild.
 
   rebuild() runs every step in this process, which is enough for tests and small stores. For large
   stores, drive the steps from an orchestrator (e.g. a Step Functions Distributed Map over the partitions).
@@ -31,6 +34,7 @@ import {
   RebuildService,
 } from "@serverless-cqrs/types";
 import { build as buildRefreshService } from "./refreshServiceBuilder";
+import { REBUILDING, START_OF_STREAM } from "./checkpoints";
 import { mapWithConcurrency } from "./mapWithConcurrency";
 
 const DEFAULT_PARTITION_SIZE = 10000;
@@ -80,26 +84,32 @@ export function build<AggregateShape, EventShape>({
     targetPartitionSize,
     reset = false,
   }) => {
-
     // capture the checkpoint before anything is scanned. Commits after it are left for the
     // refresh that follows finalizeRebuild.
-    const checkpoint = await eventStore.getLatestCommitId();
+    const checkpoint = (await eventStore.getLatestCommitId()) ?? START_OF_STREAM;
     const partitions = await eventStore.listPartitions({
       targetSize: targetPartitionSize,
     });
 
-    if (reset) await repository.reset();
-    
+    // pause refreshes before wiping, so none replays the stream into the half-empty store.
+    if (reset) {
+      await repository.setCheckpoint(REBUILDING);
+      await repository.reset();
+    }
+
     return { checkpoint, partitions };
   };
 
   const rebuildPartition: RebuildService["rebuildPartition"] = ({ partition }) =>
     rebuildEntities(eventStore.scanPartition(partition));
 
+  // this also replaces the marker from a reset, which resumes refreshes. An untyped caller
+  // may leave the checkpoint out (e.g. a plan whose JSON dropped it), and storing that as-is
+  // would leave a null checkpoint behind.
   const finalizeRebuild: RebuildService["finalizeRebuild"] = async ({
     checkpoint,
   }) => {
-    if (checkpoint) await repository.setCheckpoint(checkpoint);
+    await repository.setCheckpoint(checkpoint ?? START_OF_STREAM);
   };
 
   return {
@@ -132,8 +142,8 @@ export function build<AggregateShape, EventShape>({
       const rebuilt = results.reduce((sum, r) => sum + r.rebuilt, 0);
       const failed = results.flatMap((r) => r.failed);
 
-      // leave the checkpoint alone until the failures are resolved; a refresh would throw on
-      // the entities that are missing or behind.
+      // leave the checkpoint alone until the failures are resolved. After a reset, that keeps
+      // refreshes paused, since the failed entities are missing from the store.
       if (failed.length > 0) return { rebuilt, failed, checkpoint };
 
       await finalizeRebuild({ checkpoint });

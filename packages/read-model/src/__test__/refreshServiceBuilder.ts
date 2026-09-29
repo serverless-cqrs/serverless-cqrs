@@ -1,6 +1,7 @@
 import { test } from "tap";
 
 import { build } from "../refreshServiceBuilder";
+import { REBUILDING, START_OF_STREAM } from "../checkpoints";
 import { EventStore, ReadModelRepository } from "@serverless-cqrs/types";
 
 const baseCommit = {
@@ -167,24 +168,70 @@ test("refresh - rebuilds entities that are behind", async (assert) => {
   assert.same(checkpoint, "d", "still moves the checkpoint past them");
 });
 
-test("refresh - requireCheckpoint", async (assert) => {
-  let listed = false;
+test("refresh - paused during a rebuild with reset", async (assert) => {
+  let checkpoint: string | undefined = "b";
+  let listed = 0;
+  let applied = 0;
 
   const { refresh } = build({
     eventStore: {
       ...eventStore,
-      listCommits: async () => {
-        listed = true;
-        return [];
+      listCommits: async (commitId) => {
+        listed++;
+        return eventStore.listCommits(commitId);
       },
     },
-    repository: { ...repository, getCheckpoint: async () => undefined },
+    repository: {
+      ...repository,
+      getCheckpoint: async () => checkpoint,
+      setCheckpoint: async (commitId) => {
+        checkpoint = commitId;
+      },
+      applyCommits: async () => {
+        applied++;
+        // a rebuild with reset starts while this batch is being applied
+        checkpoint = REBUILDING;
+        return { behind: [] };
+      },
+    },
   });
 
-  const result = await refresh({ requireCheckpoint: true });
+  const warn = console.warn;
+  console.warn = () => {};
 
-  assert.same(result, { failed: [] }, "returns without failures");
-  assert.notOk(listed, "doesn't replay the event store without a checkpoint");
+  const midBatch = await refresh();
+  assert.same(midBatch, { failed: [], paused: true }, "reports that it's paused");
+  assert.equal(checkpoint, REBUILDING, "doesn't overwrite the marker with its own checkpoint");
+  assert.equal(applied, 1, "stops after the batch in flight");
+
+  const before = await refresh();
+  assert.same(before, { failed: [], paused: true }, "stays paused");
+  assert.equal(listed, 1, "doesn't list commits at all while paused");
+
+  console.warn = warn;
+});
+
+test("refresh - replays the stream from the start", async (assert) => {
+  // a store can return null, e.g. Mongo after a checkpoint was saved as undefined
+  for (const checkpoint of [undefined, null as any, START_OF_STREAM]) {
+    const listedFrom: (string | undefined)[] = [];
+
+    const { refresh } = build({
+      eventStore: {
+        ...eventStore,
+        listCommits: async (commitId) => {
+          listedFrom.push(commitId);
+          return [];
+        },
+      },
+      repository: { ...repository, getCheckpoint: async () => checkpoint },
+    });
+
+    const result = await refresh();
+
+    assert.same(result, { failed: [] }, `with checkpoint ${checkpoint}, returns without failures`);
+    assert.same(listedFrom, [undefined], `with checkpoint ${checkpoint}, lists from the start`);
+  }
 });
 
 // test("handles consecutive events", async (assert) => {

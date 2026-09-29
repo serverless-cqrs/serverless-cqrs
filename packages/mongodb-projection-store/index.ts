@@ -127,7 +127,6 @@ export function build<AggregateShape>(
       return parseResult(res);
     },
     reset: async () => {
-      await versionLock().deleteOne({ _id: entityName });
       await getDb(config).dropCollection(entityName);
     },
 

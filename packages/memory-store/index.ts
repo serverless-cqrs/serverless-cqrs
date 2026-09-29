@@ -146,7 +146,6 @@ export function build<AggregateShape, EventShape>(
     reset: async () => {
       // clear in place: projClient is the same object as projectionStore[entityName]
       Object.keys(projClient).forEach((id) => delete projClient[id]);
-      delete checkpointStore[entityName];
     },
 
     setCheckpoint: async (commitId) => {

@@ -255,7 +255,7 @@ test("reset", async (assert) => {
   await adapter.reset();
 
   assert.same(await adapter.get("123"), undefined, "clears projections");
-  assert.same(await adapter.getCheckpoint(), undefined, "clears the checkpoint");
+  assert.same(await adapter.getCheckpoint(), "123", "leaves the checkpoint alone");
 });
 
 test("batchGet", async (assert) => {

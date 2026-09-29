@@ -11,6 +11,10 @@
   An entity that can't be rebuilt either is reported and skipped, and the checkpoint moves past it anyway: otherwise one broken
   entity would stop the read model from ever catching up.
 
+  Without a checkpoint, refresh replays the whole stream, which is what a new read model needs. While a rebuild with reset is
+  in progress, the checkpoint is a marker instead, and refresh pauses: the projections are being rebuilt from scratch, and
+  replaying the stream alongside would only duplicate that work.
+
   To reconstruct projections from scratch, use the rebuild service instead.
 */
 
@@ -21,6 +25,7 @@ import {
   ReadModelRepository,
   RefreshService,
 } from "@serverless-cqrs/types";
+import { REBUILDING, START_OF_STREAM } from "./checkpoints";
 import { mapWithConcurrency } from "./mapWithConcurrency";
 
 const REPAIR_CONCURRENCY = 10;
@@ -51,16 +56,22 @@ export function build<AggregateShape, EventShape>({
     getAggregateEvents: async (aggregateId: string) => {
       return eventStore.loadEvents(aggregateId);
     },
-    refresh: async ({ requireCheckpoint = false } = {}) => {
+    refresh: async () => {
       const failed = [] as FailedEntity[];
-
-      if (requireCheckpoint && !(await repository.getCheckpoint()))
-        return { failed };
+      const paused = () => {
+        console.warn("refresh paused: a rebuild with reset is in progress");
+        return { failed, paused: true };
+      };
 
       while (true) {
-        // load new commits
         const checkpoint = await repository.getCheckpoint();
-        const commits = await eventStore.listCommits(checkpoint);
+        if (checkpoint === REBUILDING) return paused();
+
+        // load new commits. A store can hand back null, which would get past the event
+        // store's default and be sent as the commitId.
+        const commits = await eventStore.listCommits(
+          checkpoint == null || checkpoint === START_OF_STREAM ? undefined : checkpoint
+        );
 
         if (commits.length == 0)
           // if there are no more commits to process, return
@@ -74,6 +85,10 @@ export function build<AggregateShape, EventShape>({
           failed.push(...unrepaired);
         }
 
+        // a rebuild with reset may have started while this batch was applied. Don't overwrite
+        // its marker, or refreshes would resume while the store is being wiped. This narrows
+        // the race to the gap between the read and the write; it doesn't close it.
+        if ((await repository.getCheckpoint()) === REBUILDING) return paused();
         await repository.setCheckpoint(commits[commits.length - 1].commitId);
 
         console.log("processed commits:", commits.length);

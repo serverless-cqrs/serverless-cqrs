@@ -17,6 +17,7 @@ export interface ReadModelRepository<ProjectionShape, EventShape> {
     entities: Commit<EventShape>[][]
   ) => Promise<{ rebuilt: number; failed: FailedEntity[] }>;
   search: (params: any) => Promise<StorageSearchResults<ProjectionShape>>;
+  // delete every projection, but not the checkpoint.
   reset: () => Promise<void>;
 }
 

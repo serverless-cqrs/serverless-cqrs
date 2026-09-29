@@ -22,6 +22,7 @@ export interface ProjectionStore<ProjectionShape> {
   // the commitId that refresh has applied up to.
   getCheckpoint: () => Promise<string | undefined>;
   setCheckpoint: (commitId: string) => Promise<void>;
+  // delete every projection, but not the checkpoint: the rebuild service manages that.
   reset: () => Promise<void>;
   batchGet: (ids: ID[]) => Promise<Projection<ProjectionShape>[]>;
   // writes a projection only if its version is newer than the stored one, or, with
