@@ -16,15 +16,24 @@ export interface EventStore<EventShape> {
   scanPartition: (partition: Partition) => AsyncIterable<Commit<EventShape>[]>;
 }
 
+/**
+ * How a read may be served. `consistentRead: false` lets a replica answer it, and a replica can
+ * be a moment behind the primary. Anything else reads the primary, which is what the read
+ * model's own upkeep (applying events, rebuilding) relies on: it never passes this.
+ */
+export interface ReadOptions {
+  consistentRead?: boolean;
+}
+
 export interface ProjectionStore<ProjectionShape> {
   set: (projection: Projection<ProjectionShape>) => Promise<void>;
-  get: (id: ID) => Promise<Projection<ProjectionShape> | undefined>;
+  get: (id: ID, options?: ReadOptions) => Promise<Projection<ProjectionShape> | undefined>;
   // the commitId that refresh has applied up to.
   getCheckpoint: () => Promise<string | undefined>;
   setCheckpoint: (commitId: string) => Promise<void>;
   // delete every projection, but not the checkpoint: the rebuild service manages that.
   reset: () => Promise<void>;
-  batchGet: (ids: ID[]) => Promise<Projection<ProjectionShape>[]>;
+  batchGet: (ids: ID[], options?: ReadOptions) => Promise<Projection<ProjectionShape>[]>;
   // writes a projection only if its version is newer than the stored one, or, with
   // overwriteSameVersion, at least as new. Projections that lose that check are
   // skipped and returned as conflicts; the rest of the batch is still written.
@@ -39,7 +48,7 @@ export interface ProjectionStore<ProjectionShape> {
   ) => Promise<StorageSearchResults<ProjectionShape>>;
 }
 
-interface BasicListParams {
+interface BasicListParams extends ReadOptions {
   pagination?: {
     page: number;
     perPage: number;
@@ -67,6 +76,7 @@ type ProjectionSearchParams<ProjectionShape> =
       rawSearch: any;
       pagination?: never;
       sort?: never;
+      consistentRead?: never;
     };
 
 interface StorageSearchResults<ProjectionShape> {

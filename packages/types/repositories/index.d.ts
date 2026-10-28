@@ -1,11 +1,11 @@
 import { ID, Projection, Commit, Aggregate, FailedEntity } from "../base";
-import { StorageSearchResults } from "../storage";
+import { ReadOptions, StorageSearchResults } from "../storage";
 
 export interface ReadModelRepository<ProjectionShape, EventShape> {
   getCheckpoint: () => Promise<string | undefined>;
   setCheckpoint: (commitId: string) => Promise<void>;
-  getById: (id: ID) => Promise<Projection<ProjectionShape> | undefined>;
-  getByIds: (ids: ID[]) => Promise<Projection<ProjectionShape>[]>;
+  getById: (id: ID, options?: ReadOptions) => Promise<Projection<ProjectionShape> | undefined>;
+  getByIds: (ids: ID[], options?: ReadOptions) => Promise<Projection<ProjectionShape>[]>;
   applyEvents: (id: ID, events: EventShape[], version: number) => Promise<void>;
   // apply commits on top of the existing projections. An entity whose projection is missing
   // earlier commits can't be applied; it's skipped and returned in `behind`, and the rest of

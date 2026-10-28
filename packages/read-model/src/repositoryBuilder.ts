@@ -89,11 +89,11 @@ export function build<ProjectionShape, EventShape>({
   return {
     getCheckpoint: () => projectionStore.getCheckpoint(),
     setCheckpoint: (commitId) => projectionStore.setCheckpoint(commitId),
-    getById: async (id) => {
-      return await projectionStore.get(id);
+    getById: async (id, options) => {
+      return await projectionStore.get(id, options);
     },
-    getByIds: async (ids = []) => {
-      return ids.length !== 0 ? await projectionStore.batchGet(ids) : [];
+    getByIds: async (ids = [], options) => {
+      return ids.length !== 0 ? await projectionStore.batchGet(ids, options) : [];
     },
 
     applyEvents: async (id, events, version) => {

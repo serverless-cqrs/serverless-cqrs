@@ -82,3 +82,36 @@ test("search", async (assert) => {
   const res = await handler.search({ userId: "u123" });
   assert.same(res, expected, "returns for search");
 });
+
+test("only an explicit consistentRead: true reads the primary", async (assert) => {
+  const reads: any[] = [];
+  const recording = build({
+    repository: {
+      ...repository,
+      getById: async (id, options) => (reads.push(["getById", options]), repository.getById(id)),
+      getByIds: async (ids, options) => (reads.push(["getByIds", options]), repository.getByIds(ids)),
+      search: async (params) => (reads.push(["search", params.consistentRead]), repository.search(params)),
+    },
+  });
+
+  await recording.getById({ id: "a123" });
+  await recording.getById({ id: "a123", consistentRead: false });
+  await recording.getById({ id: "a123", consistentRead: true });
+  await recording.getByIds({ ids: ["a123"] });
+  await recording.getByIds({ ids: ["a123"], consistentRead: true });
+  await recording.search({ filter: { userId: "u123" } });
+  await recording.search({ filter: { userId: "u123" }, consistentRead: null });
+  await recording.search({ filter: { userId: "u123" }, consistentRead: true });
+
+  assert.same(reads, [
+    ["getById", { consistentRead: false }],
+    ["getById", { consistentRead: false }],
+    ["getById", { consistentRead: true }],
+    ["getByIds", { consistentRead: false }],
+    ["getByIds", { consistentRead: true }],
+    ["search", false],
+    ["search", false],
+    ["search", true],
+  ]);
+});
+

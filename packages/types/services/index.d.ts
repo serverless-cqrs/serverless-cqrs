@@ -8,16 +8,22 @@ export type QueryServiceResult<ProjectionShape> = {
   id: ID;
 } & ProjectionShape;
 
+// Only a query that sets consistentRead: true reads the primary; any other may be answered by a
+// replica, a moment behind. A caller asking for a consistent read should refresh first.
 export interface QueryService<ProjectionShape> {
   getById: ({
     id,
+    consistentRead,
   }: {
     id: ID;
+    consistentRead?: boolean;
   }) => Promise<QueryServiceResult<ProjectionShape> | undefined>;
   getByIds: ({
     ids,
+    consistentRead,
   }: {
     ids: ID[];
+    consistentRead?: boolean;
   }) => Promise<QueryServiceResult<ProjectionShape>[]>;
   search: (params: any) => Promise<QueryServiceSearchResults<ProjectionShape>>;
 }

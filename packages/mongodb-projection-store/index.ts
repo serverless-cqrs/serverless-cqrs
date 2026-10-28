@@ -125,8 +125,13 @@ export function build<AggregateShape>(
           { upsert: true }
         );
     },
-    get: async (id) => {
-      const res = await collection().findOne({ _id: id });
+    get: async (id, options) => {
+      // A replica may answer only a read that says it needn't be consistent: it can be a moment
+      // behind the primary. The read model's upkeep never says so, so it reads the primary.
+      const res = await collection().findOne(
+        { _id: id },
+        options?.consistentRead === false ? { readPreference: "secondaryPreferred" } : {}
+      );
       if (!res) return;
 
       return parseResult(res);
@@ -166,13 +171,16 @@ export function build<AggregateShape>(
       const res = await versionLock().findOne({ _id: entityName }, { readPreference: "primary"});
       return res?._state;
     },
-    batchGet: async (ids) => {
+    batchGet: async (ids, options) => {
       const res = await collection()
-        .find({
-          _id: {
-            $in: ids,
+        .find(
+          {
+            _id: {
+              $in: ids,
+            },
           },
-        })
+          options?.consistentRead === false ? { readPreference: "secondaryPreferred" } : {}
+        )
         .toArray();
 
       return res.map(parseResult);
@@ -289,8 +297,9 @@ export function build<AggregateShape>(
 
         options.sort = [field, order.toLowerCase()];
       }
-      const total = await collection().countDocuments(countFilter);
-      const results = await collection().find(findFilter, options).toArray();
+      const readFrom = params.consistentRead === false ? { readPreference: "secondaryPreferred" as const } : {};
+      const total = await collection().countDocuments(countFilter, readFrom);
+      const results = await collection().find(findFilter, { ...options, ...readFrom }).toArray();
 
       return {
         data: results.map(parseResult),

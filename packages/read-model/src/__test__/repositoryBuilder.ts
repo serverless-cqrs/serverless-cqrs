@@ -350,3 +350,31 @@ test("rebuild", async (assert) => {
     "ignores empty entities"
   );
 });
+
+test("queries pass their read options on; upkeep never sends any", async (assert) => {
+  const reads: any[] = [];
+  const recording = build<ProjectionShape, EventShape>({
+    reducer,
+    projectionStore: {
+      ...projectionStore,
+      get: async (id: string, options?: any) => (reads.push(["get", options]), projectionStore.get(id)),
+      batchGet: async (ids: string[], options?: any) => (reads.push(["batchGet", options]), projectionStore.batchGet(ids)),
+    },
+  });
+
+  await recording.getById("123", { consistentRead: false });
+  await recording.getByIds(["123"], { consistentRead: false });
+  assert.same(reads, [
+    ["get", { consistentRead: false }],
+    ["batchGet", { consistentRead: false }],
+  ], "a query's options reach the store");
+
+  reads.length = 0;
+  await recording.applyEvents("new-1", [{ foo: "a" }], 0);
+  await recording.applyCommits([{ entityId: "new-2", version: 0, events: [{ foo: "b" }] } as any]);
+  assert.same(reads, [
+    ["get", undefined],
+    ["batchGet", undefined],
+  ], "applying events reads the primary");
+});
+

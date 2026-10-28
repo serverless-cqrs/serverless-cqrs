@@ -5,6 +5,9 @@ import { flattenQuery, canMatchMissing } from "../index";
 // the query shape itself, not just the rows it happens to return.
 const capturedFilters: any[] = [];
 
+// The read preference each count and find was sent with, newest last.
+const capturedReadPreferences: [string, string | undefined][] = [];
+
 // Mock MongoDB client and collections
 class MockCollection {
   private data: Map<string, any> = new Map();
@@ -30,7 +33,8 @@ class MockCollection {
     return { matchedCount: 1, modifiedCount: 1 };
   }
 
-  async findOne(filter: any) {
+  async findOne(filter: any, options?: any) {
+    capturedReadPreferences.push(["findOne", options?.readPreference]);
     if (filter._id) {
       return this.data.get(filter._id) || null;
     }
@@ -55,6 +59,7 @@ class MockCollection {
 
   find(filter: any, options?: any) {
     capturedFilters.push(filter);
+    if (!options?.countingOnly) capturedReadPreferences.push(["find", options?.readPreference]);
     let results = Array.from(this.data.values());
 
     // Apply filter. The adapter drops the $and wrapper when a single condition
@@ -96,8 +101,9 @@ class MockCollection {
     };
   }
 
-  async countDocuments(filter: any) {
-    const findResult = await this.find(filter);
+  async countDocuments(filter: any, options?: any) {
+    capturedReadPreferences.push(["count", options?.readPreference]);
+    const findResult = await this.find(filter, { countingOnly: true });
     const array = await findResult.toArray();
     return array.length;
   }
@@ -977,4 +983,50 @@ test("search - both keep the guard when there is no filter", async (assert) => {
 
   assert.same(countFilter, { _state: { $exists: true } }, "unfiltered count excludes tombstones");
   assert.same(findFilter, { _state: { $exists: true } }, "unfiltered find excludes tombstones");
+});
+
+test("search - consistentRead: false sends the count and the find to a replica", async (assert) => {
+  const adapter = await searchAdapter(assert);
+
+  capturedReadPreferences.length = 0;
+  await adapter.search({ filter: { foo: "bar" }, consistentRead: false, pagination: { page: 1, perPage: 10 } });
+
+  assert.same(capturedReadPreferences, [
+    ["count", "secondaryPreferred"],
+    ["find", "secondaryPreferred"],
+  ]);
+});
+
+test("search - otherwise, reads stay on the primary", async (assert) => {
+  const adapter = await searchAdapter(assert);
+
+  capturedReadPreferences.length = 0;
+  await adapter.search({ filter: { foo: "bar" } });
+  await adapter.search({ filter: { foo: "bar" }, consistentRead: true });
+
+  assert.same(capturedReadPreferences, [
+    ["count", undefined],
+    ["find", undefined],
+    ["count", undefined],
+    ["find", undefined],
+  ]);
+});
+
+test("get and batchGet read a replica only on consistentRead: false", async (assert) => {
+  const adapter = await searchAdapter(assert);
+
+  capturedReadPreferences.length = 0;
+  await adapter.get("a", { consistentRead: false });
+  await adapter.get("a");
+  await adapter.get("a", { consistentRead: true });
+  await adapter.batchGet(["a"], { consistentRead: false });
+  await adapter.batchGet(["a"]);
+
+  assert.same(capturedReadPreferences, [
+    ["findOne", "secondaryPreferred"],
+    ["findOne", undefined],
+    ["findOne", undefined],
+    ["find", "secondaryPreferred"],
+    ["find", undefined],
+  ]);
 });
